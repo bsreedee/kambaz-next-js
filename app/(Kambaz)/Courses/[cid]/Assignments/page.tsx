@@ -1,17 +1,23 @@
 import Link from "next/link";
-import { Button, Form, ListGroup, ListGroupItem } from "react-bootstrap";
+import { Button, Form, InputGroup, ListGroup, ListGroupItem } from "react-bootstrap";
 import { FaPlus, FaUserGroup } from "react-icons/fa6";
 import { MdAssignment } from "react-icons/md";
 import './assignmentstyles.css';
 import { BsGripVertical } from "react-icons/bs";
+import { FaSearch } from "react-icons/fa";
 import AssignmentControlButtons from "./AssignmentControlButtons";
 
 export default function Assignments() {
   return (
     <div>
       <div className="d-flex align-items-center gap-2">
-      <Form.Control type="text"  placeholder="Search..." id="wd-search-assignment" className="search-input" style={{ maxWidth: "250px"}}/>
-      <Button variant="outline-secondary" className="custom-btn ms-auto" // Key change: ms-auto pushes this and subsequent items to the right
+
+      <InputGroup style={{ maxWidth: "250px" }}>
+        <Button variant="outline-secondary" className="btn"> <FaSearch className="fs-5" /> </Button>
+        <Form.Control type="text" placeholder="Search..." id="wd-search-assignment" className="search-input"/>
+      </InputGroup>
+      
+      <Button variant="outline-secondary" className="custom-btn ms-auto" 
        ><FaUserGroup className="me-2 fs-5" />  <FaPlus className="me-2 fs-5" />  Group
       </Button>
       <Button variant="danger" className="custom-btn">
