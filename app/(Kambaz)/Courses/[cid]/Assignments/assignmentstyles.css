@@ -1,0 +1,55 @@
+.assignment-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem; 
+  flex-wrap: wrap; 
+}
+
+.search-input {
+  flex: 1; 
+  min-width: 200px;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+
+.custom-btn {
+  white-space: nowrap; 
+}
+
+.percentage-badge {
+  font-size: 1rem;          /* slightly larger text */
+  font-weight: 600;         /* make it bold */
+  padding: 6px 12px;        /* add some breathing room */
+  border-radius: 12px;      /* smooth pill shape */
+}
+
+#wd-assignments-editor {
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: white;
+}
+
+.assignment-box {
+  border: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.assignment-box ul {
+  margin-top: 0.5rem;
+}
+
+.assign-box {
+  border: 1px solid #e0e0e0;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.link-primary {
+  color: #0b6efd;
+  text-decoration: none;
+}
+
+.link-primary:hover {
+  text-decoration: underline;
+}
