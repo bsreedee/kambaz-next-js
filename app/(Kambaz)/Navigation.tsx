@@ -34,16 +34,20 @@ export default function KambazNavigation() {
 
       {links.map((link) => {
         const isActive = activeId === link.id;
-
         const isAccount = link.id === "wd-account-link";
+
         const bgColor = isActive ? "bg-white" : "bg-black";
-        const textColor = isActive
-          ? isAccount
-            ? "text-danger"
-            : "text-danger"
-          : isAccount
-            ? "text-white"
-            : "text-danger";
+        
+        const linkTextColor = isActive ? "text-danger" : "text-white";
+
+        let iconColor;
+        if (isAccount) {
+
+          iconColor = isActive ? "text-danger" : "text-white";
+        } else {
+
+          iconColor = "text-danger";
+        }
 
         return (
           <ListGroupItem
@@ -54,10 +58,16 @@ export default function KambazNavigation() {
             <Link
               href={link.href}
               id={link.id}
-              className={`text-decoration-none d-block ${textColor}`}
+              className={`text-decoration-none d-block`}
             >
-              <div className="fs-1">{link.icon}</div>
-              {link.label}
+
+              <div className={`fs-1 ${iconColor}`}>
+                  {link.icon}
+              </div>
+
+              <div className={linkTextColor}>
+                {link.label}
+              </div>
             </Link>
           </ListGroupItem>
         );
