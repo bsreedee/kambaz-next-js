@@ -1,33 +1,33 @@
 [
-  { "_id": "CS101_1", "title": "React Components Assignment", "course": "CS101", "start": "2025-05-30T00:00", "end": "2025-06-09T23:59", "description": "Create React components with proper props and state management." },
-  { "_id": "CS101_2", "title": "State and Props Quiz", "course": "CS101", "start": "2025-06-10T00:00", "end": "2025-06-22T23:59", "description": "Test your understanding of state and props in React." },
-  { "_id": "CS101_3", "title": "React Hooks Project", "course": "CS101", "start": "2025-06-23T00:00", "end": "2025-07-03T23:59", "description": "Build a small app using React Hooks and context API." },
+  { "_id": "CS101_A1", "title": "React Components Assignment", "course": "CS101", "start": "2025-05-30T00:00", "end": "2025-06-09T23:59", "description": "Create React components with proper props and state management." },
+  { "_id": "CS101_A2", "title": "State and Props Quiz", "course": "CS101", "start": "2025-06-10T00:00", "end": "2025-06-22T23:59", "description": "Test your understanding of state and props in React." },
+  { "_id": "CS101_A3", "title": "React Hooks Project", "course": "CS101", "start": "2025-06-23T00:00", "end": "2025-07-03T23:59", "description": "Build a small app using React Hooks and context API." },
 
-  { "_id": "CS102_1", "title": "OOP Concepts Assignment", "course": "CS102", "start": "2025-05-22T00:00", "end": "2025-06-05T23:59", "description": "Implement classes and objects demonstrating OOP principles in Java." },
-  { "_id": "CS102_2", "title": "Inheritance and Polymorphism Quiz", "course": "CS102", "start": "2025-06-06T00:00", "end": "2025-06-18T23:59", "description": "Quiz on inheritance, polymorphism, and method overriding." },
-  { "_id": "CS102_3", "title": "Java Collections Project", "course": "CS102", "start": "2025-06-20T00:00", "end": "2025-07-01T23:59", "description": "Use Java Collections Framework to solve practical problems." },
+  { "_id": "CS102_A1", "title": "OOP Concepts Assignment", "course": "CS102", "start": "2025-05-22T00:00", "end": "2025-06-05T23:59", "description": "Implement classes and objects demonstrating OOP principles in Java." },
+  { "_id": "CS102_A2", "title": "Inheritance and Polymorphism Quiz", "course": "CS102", "start": "2025-06-06T00:00", "end": "2025-06-18T23:59", "description": "Quiz on inheritance, polymorphism, and method overriding." },
+  { "_id": "CS102_A3", "title": "Java Collections Project", "course": "CS102", "start": "2025-06-20T00:00", "end": "2025-07-01T23:59", "description": "Use Java Collections Framework to solve practical problems." },
 
-  { "_id": "CS103_1", "title": "Python Basics Exercise", "course": "CS103", "start": "2025-05-20T00:00", "end": "2025-06-04T23:59", "description": "Practice basic Python syntax, variables, and data types." },
-  { "_id": "CS103_2", "title": "Data Structures Quiz", "course": "CS103", "start": "2025-06-05T00:00", "end": "2025-06-16T23:59", "description": "Quiz covering lists, tuples, dictionaries, and sets in Python." },
-  { "_id": "CS103_3", "title": "File Handling Project", "course": "CS103", "start": "2025-06-19T00:00", "end": "2025-06-30T23:59", "description": "Create a Python program that reads and writes files efficiently." },
+  { "_id": "CS103_A1", "title": "Python Basics Exercise", "course": "CS103", "start": "2025-05-20T00:00", "end": "2025-06-04T23:59", "description": "Practice basic Python syntax, variables, and data types." },
+  { "_id": "CS103_A2", "title": "Data Structures Quiz", "course": "CS103", "start": "2025-06-05T00:00", "end": "2025-06-16T23:59", "description": "Quiz covering lists, tuples, dictionaries, and sets in Python." },
+  { "_id": "CS103_A3", "title": "File Handling Project", "course": "CS103", "start": "2025-06-19T00:00", "end": "2025-06-30T23:59", "description": "Create a Python program that reads and writes files efficiently." },
 
-  { "_id": "CS104_1", "title": "JavaScript Fundamentals Assignment", "course": "CS104", "start": "2025-05-31T00:00", "end": "2025-06-09T23:59", "description": "Practice variables, functions, and control flow in JavaScript." },
-  { "_id": "CS104_2", "title": "DOM Manipulation Quiz", "course": "CS104", "start": "2025-06-10T00:00", "end": "2025-06-21T23:59", "description": "Quiz on selecting and manipulating DOM elements." },
-  { "_id": "CS104_3", "title": "ES6 Features Project", "course": "CS104", "start": "2025-06-24T00:00", "end": "2025-07-05T23:59", "description": "Use modern ES6 features such as arrow functions, let/const, and template literals." },
+  { "_id": "CS104_A1", "title": "JavaScript Fundamentals Assignment", "course": "CS104", "start": "2025-05-31T00:00", "end": "2025-06-09T23:59", "description": "Practice variables, functions, and control flow in JavaScript." },
+  { "_id": "CS104_A2", "title": "DOM Manipulation Quiz", "course": "CS104", "start": "2025-06-10T00:00", "end": "2025-06-21T23:59", "description": "Quiz on selecting and manipulating DOM elements." },
+  { "_id": "CS104_A3", "title": "ES6 Features Project", "course": "CS104", "start": "2025-06-24T00:00", "end": "2025-07-05T23:59", "description": "Use modern ES6 features such as arrow functions, let/const, and template literals." },
 
-  { "_id": "CS105_1", "title": "HTML Page Layout Task", "course": "CS105", "start": "2025-05-29T00:00", "end": "2025-06-13T23:59", "description": "Design a complete HTML page with semantic elements and sections." },
-  { "_id": "CS105_2", "title": "CSS Styling Exercise", "course": "CS105", "start": "2025-06-14T00:00", "end": "2025-06-25T23:59", "description": "Style web pages using CSS selectors, flexbox, and grid layouts." },
-  { "_id": "CS105_3", "title": "Responsive Design Project", "course": "CS105", "start": "2025-06-26T00:00", "end": "2025-07-11T23:59", "description": "Build a responsive website that works on multiple devices." },
+  { "_id": "CS105_A1", "title": "HTML Page Layout Task", "course": "CS105", "start": "2025-05-29T00:00", "end": "2025-06-13T23:59", "description": "Design a complete HTML page with semantic elements and sections." },
+  { "_id": "CS105_A2", "title": "CSS Styling Exercise", "course": "CS105", "start": "2025-06-14T00:00", "end": "2025-06-25T23:59", "description": "Style web pages using CSS selectors, flexbox, and grid layouts." },
+  { "_id": "CS105_A3", "title": "Responsive Design Project", "course": "CS105", "start": "2025-06-26T00:00", "end": "2025-07-11T23:59", "description": "Build a responsive website that works on multiple devices." },
 
-  { "_id": "CS106_1", "title": "MongoDB CRUD Operations", "course": "CS106", "start": "2025-05-28T00:00", "end": "2025-06-05T23:59", "description": "Perform basic create, read, update, and delete operations in MongoDB." },
-  { "_id": "CS106_2", "title": "Aggregation Framework Quiz", "course": "CS106", "start": "2025-06-06T00:00", "end": "2025-06-17T23:59", "description": "Quiz on using MongoDB aggregation pipelines and operators." },
-  { "_id": "CS106_3", "title": "Database Design Project", "course": "CS106", "start": "2025-06-18T00:00", "end": "2025-06-28T23:59", "description": "Design a NoSQL database schema for a real-world application." },
+  { "_id": "CS106_A1", "title": "MongoDB CRUD Operations", "course": "CS106", "start": "2025-05-28T00:00", "end": "2025-06-05T23:59", "description": "Perform basic create, read, update, and delete operations in MongoDB." },
+  { "_id": "CS106_A2", "title": "Aggregation Framework Quiz", "course": "CS106", "start": "2025-06-06T00:00", "end": "2025-06-17T23:59", "description": "Quiz on using MongoDB aggregation pipelines and operators." },
+  { "_id": "CS106_A3", "title": "Database Design Project", "course": "CS106", "start": "2025-06-18T00:00", "end": "2025-06-28T23:59", "description": "Design a NoSQL database schema for a real-world application." },
 
-  { "_id": "CS107_1", "title": "SQL Queries Assignment", "course": "CS107", "start": "2025-05-10T00:00", "end": "2025-05-24T23:59", "description": "Write SQL queries for retrieving and manipulating relational data." },
-  { "_id": "CS107_2", "title": "Normalization Quiz", "course": "CS107", "start": "2025-05-25T00:00", "end": "2025-06-06T23:59", "description": "Quiz on database normalization and reducing data redundancy." },
-  { "_id": "CS107_3", "title": "Database Schema Project", "course": "CS107", "start": "2025-06-07T00:00", "end": "2025-06-19T23:59", "description": "Design and implement a relational database schema with tables and relationships." },
+  { "_id": "CS107_A1", "title": "SQL Queries Assignment", "course": "CS107", "start": "2025-05-10T00:00", "end": "2025-05-24T23:59", "description": "Write SQL queries for retrieving and manipulating relational data." },
+  { "_id": "CS107_A2", "title": "Normalization Quiz", "course": "CS107", "start": "2025-05-25T00:00", "end": "2025-06-06T23:59", "description": "Quiz on database normalization and reducing data redundancy." },
+  { "_id": "CS107_A3", "title": "Database Schema Project", "course": "CS107", "start": "2025-06-07T00:00", "end": "2025-06-19T23:59", "description": "Design and implement a relational database schema with tables and relationships." },
 
-  { "_id": "CS108_1", "title": "Node.js Basics Assignment", "course": "CS108", "start": "2025-05-20T00:00", "end": "2025-05-31T23:59", "description": "Learn Node.js basics by creating server-side scripts." },
-  { "_id": "CS108_2", "title": "API Development Quiz", "course": "CS108", "start": "2025-06-06T00:00", "end": "2025-06-17T23:59", "description": "Quiz on building RESTful APIs with Node.js and Express." },
-  { "_id": "CS108_3", "title": "Express.js Server Project", "course": "CS108", "start": "2025-06-28T00:00", "end": "2025-07-10T23:59", "description": "Develop a complete Express.js server with routes and middleware." }
+  { "_id": "CS108_A1", "title": "Node.js Basics Assignment", "course": "CS108", "start": "2025-05-20T00:00", "end": "2025-05-31T23:59", "description": "Learn Node.js basics by creating server-side scripts." },
+  { "_id": "CS108_A2", "title": "API Development Quiz", "course": "CS108", "start": "2025-06-06T00:00", "end": "2025-06-17T23:59", "description": "Quiz on building RESTful APIs with Node.js and Express." },
+  { "_id": "CS108_A3", "title": "Express.js Server Project", "course": "CS108", "start": "2025-06-28T00:00", "end": "2025-07-10T23:59", "description": "Develop a complete Express.js server with routes and middleware." }
 ]
