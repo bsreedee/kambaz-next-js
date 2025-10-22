@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import { useParams } from "next/navigation";
 import modules from "../../../Database/modules.json";
@@ -15,6 +16,7 @@ export default function Modules() {
       <ModulesControls /><br /><br /><br /><br />
       <ListGroup className="rounded-0" id="wd-modules">
         {modules
+        
           .filter((module: any) => module.course === cid)
           .map((module: any) => (
 

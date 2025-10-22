@@ -44,6 +44,7 @@ export default function Assignments() {
           </div>
         </div>
               {assignments
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .filter((assignment: any) => assignment.course === cid)
                 .map((assignment, index) => (
                   <ListGroupItem 
