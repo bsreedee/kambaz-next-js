@@ -37,7 +37,7 @@ export default function AssignmentEditor(){
             as="textarea"
             id="wd-description"
             rows={10}
-            defaultValue={`${assignment.description} The assignment is available online
+            defaultValue={`${assignment.description} The assignment is available online.
 
 Submit a link to your Github.
 The readme should include the following:
