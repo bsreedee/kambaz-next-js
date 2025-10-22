@@ -7,7 +7,7 @@
   { "_id": "6", "username": "frodo_baggins", "firstName": "Frodo", "lastName": "Baggins", "role": "FACULTY", "loginId": "001234567S", "section": "S102", "lastActivity": "2020-12-02", "totalActivity": "44:33:22" },
   { "_id": "7", "username": "strider", "firstName": "Aragorn", "lastName": "Elessar", "role": "TA", "loginId": "001234568S", "section": "S102", "lastActivity": "2020-12-04", "totalActivity": "12:23:34" },
   { "_id": "8", "username": "legolas", "firstName": "Legolas", "lastName": "Greenleaf", "role": "STUDENT", "loginId": "001234569S", "section": "S102", "lastActivity": "2020-11-11", "totalActivity": "21:32:43" },
-  { "_id": "9", "username": "ada_lovelace", "firstName": "Ada", "lastName": "Lovelace", "role": "ADMIN", "loginId": "002143650S", "section": "S102", "lastActivity": "1852-11-27", "totalActivity": "21:32:43" },
+  { "_id": "9", "username": "ada_lovelace", "firstName": "Ada", "lastName": "Lovelace", "role": "ADMIN", "loginId": "002143650S", "section": "S102", "lastActivity": "2020-11-27", "totalActivity": "21:32:43" },
   { "_id": "10", "username": "steve_rogers", "firstName": "Steve", "lastName": "Rogers", "role": "STUDENT", "loginId": "001234570S", "section": "S103", "lastActivity": "2020-10-04", "totalActivity": "07:31:36" },
   { "_id": "11", "username": "clark_kent", "firstName": "Clark", "lastName": "Kent", "role": "STUDENT", "loginId": "001234571S", "section": "S103", "lastActivity": "2020-09-15", "totalActivity": "09:21:11" },
   { "_id": "12", "username": "diana_prince", "firstName": "Diana", "lastName": "Prince", "role": "TA", "loginId": "001234572S", "section": "S103", "lastActivity": "2020-09-25", "totalActivity": "12:11:22" },
