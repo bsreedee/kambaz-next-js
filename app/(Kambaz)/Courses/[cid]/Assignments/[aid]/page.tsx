@@ -1,24 +1,32 @@
 'use client';
-
-import { use } from "react";
 import { Form, Button, Row, Col } from "react-bootstrap";
+import assignments from "../../../../Database/assignments.json";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 
-export default function AssignmentEditor({
-  params,
-}: {
-  params: Promise<{ cid: string; aid: string }>;
-}) {
+export default function AssignmentEditor(){
+  const { cid, aid } = useParams();
+
+  const assignment = assignments.find(a => a.course === cid && a._id === aid);
+  if (!assignment) {
+      return (
+        <div className="mb-3">
+          <h3>Assignment not found</h3>
+          <Link href={`/Courses/${cid}/Assignments`}>
+            <Button variant="secondary">Back to Assignments</Button>
+          </Link>
+        </div>
+      );
+    }
 
   return (
     <div id="wd-assignments-editor" className="p-3">
       <Form>
-        
-
         <div className="mb-3">
           <Form.Label htmlFor="wd-name">
             <strong>Assignment Name</strong>
           </Form.Label>
-          <Form.Control id="wd-name" type="text" defaultValue="A1 - ENV + HTML" />
+          <Form.Control id="wd-name" type="text" defaultValue={assignment.title} />
         </div>
 
         <div className="mb-3">
@@ -29,15 +37,14 @@ export default function AssignmentEditor({
             as="textarea"
             id="wd-description"
             rows={10}
-            defaultValue={`The assignment is available online
+            defaultValue={`${assignment.description} The assignment is available online
 
-Submit a link to the landing page of your Web application running on Netlify.
-The landing page should include the following:
-    •⁠  ⁠Your full name and section
-    •⁠  ⁠Links to each of the lab assignments
-    •⁠  ⁠Link to the Kanbas application
-    •⁠  ⁠Links to all relevant source code repositories
-The Kambaz application should include a link to navigate back to the landing page.`}
+Submit a link to your Github.
+The readme should include the following:
+    •⁠  ⁠Your full name
+    •⁠  ⁠Your Section
+    •⁠  Your NUID
+    •⁠  ⁠Links to all relevant source code repositories`}
           />
         </div>
 
@@ -119,7 +126,7 @@ The Kambaz application should include a link to navigate back to the landing pag
                 <Form.Label htmlFor="wd-due-date">
                   <strong>Due</strong>
                 </Form.Label>
-                <Form.Control id="wd-due-date" type="datetime-local" defaultValue="2024-05-13T23:59" />
+                <Form.Control id="wd-due-date" type="datetime-local" defaultValue={assignment.end}/>
               </div>
 
               <Row>
@@ -128,7 +135,7 @@ The Kambaz application should include a link to navigate back to the landing pag
                     <Form.Label htmlFor="wd-available-from">
                       <strong>Available from</strong>
                     </Form.Label>
-                    <Form.Control id="wd-available-from" type="datetime-local" defaultValue="2024-05-06T00:00" />
+                    <Form.Control id="wd-available-from" type="datetime-local" defaultValue={assignment.start} />
                   </div>
                 </Col>
                 <Col md={6}>
@@ -136,7 +143,7 @@ The Kambaz application should include a link to navigate back to the landing pag
                     <Form.Label htmlFor="wd-available-until">
                       <strong>Until</strong>
                     </Form.Label>
-                    <Form.Control id="wd-available-until" type="datetime-local" defaultValue="2024-05-16T00:00" />
+                    <Form.Control id="wd-available-until" type="datetime-local" defaultValue={assignment.end} />
                   </div>
                 </Col>
               </Row>
@@ -147,12 +154,13 @@ The Kambaz application should include a link to navigate back to the landing pag
         <hr />
         
         <div className="d-flex justify-content-end gap-2">
-          <Button variant="secondary" type="button">
-            Cancel
-          </Button>
-          <Button variant="danger" type="submit">
-            Save
-          </Button>
+          <Link href={`/Courses/${cid}/Assignments`}>
+          <Button variant="secondary">Cancel</Button>
+        </Link>
+        <Link href={`/Courses/${cid}/Assignments`}>
+          <Button variant="danger">Save</Button>
+        </Link>
+
         </div>
       </Form>
     </div>
