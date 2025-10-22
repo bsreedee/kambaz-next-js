@@ -1,6 +1,4 @@
 'use client';
-
-import { use } from "react";
 import { Form, Button, Row, Col } from "react-bootstrap";
 import assignments from "../../../../Database/assignments.json";
 import { useParams } from "next/navigation";
@@ -10,7 +8,16 @@ export default function AssignmentEditor(){
   const { cid, aid } = useParams();
 
   const assignment = assignments.find(a => a.course === cid && a._id === aid);
-
+  if (!assignment) {
+      return (
+        <div className="mb-3">
+          <h3>Assignment not found</h3>
+          <Link href={`/Courses/${cid}/Assignments`}>
+            <Button variant="secondary">Back to Assignments</Button>
+          </Link>
+        </div>
+      );
+    }
 
   return (
     <div id="wd-assignments-editor" className="p-3">
