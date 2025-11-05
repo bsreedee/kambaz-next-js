@@ -2,15 +2,14 @@ import { useSelector, useDispatch } from "react-redux";
 import { Button, FormControl, ListGroup, ListGroupItem } from "react-bootstrap";
 import TodoForm from "./TodoForm";
 import TodoItem from "./TodoItem";
+
 import { addTodo, deleteTodo, updateTodo, setTodo } from "./todosReducer";
 import { RootState } from "../../store";
 
 export default function TodoList() {
-  // Get state from Redux store
   const { todos, todo } = useSelector((state: RootState) => state.todosReducer);
   const dispatch = useDispatch();
 
-  // Create handler functions that dispatch Redux actions
   const handleAddTodo = (todo: { id: string; title: string }) => {
     dispatch(addTodo(todo));
   };
@@ -31,17 +30,11 @@ export default function TodoList() {
     <div>
       <h2>Todo List</h2>
       <ListGroup>
-        <TodoForm
-          todo={todo}
-          setTodo={handleSetTodo}
-          addTodo={handleAddTodo}
-          updateTodo={handleUpdateTodo}
-        />
-        {todos.map((todo) => (
+        <TodoForm/>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {todos.map((todo: any) => (
           <TodoItem key={todo.id}
-            todo={todo}
-            deleteTodo={handleDeleteTodo}
-            setTodo={handleSetTodo} />
+            todo={todo} />
         ))}
       </ListGroup>
       <hr/>
