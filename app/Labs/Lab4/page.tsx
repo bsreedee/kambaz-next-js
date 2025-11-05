@@ -36,7 +36,6 @@ export default function Lab4() {
       <ArrayStateVariable />
       <ParentStateComponent />
       <ReduxExamples/>
-      
     </div>
     </Provider>
   );
