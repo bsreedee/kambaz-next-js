@@ -1,22 +1,33 @@
-import { ReactNode } from "react";
+"use client";
+import { ReactNode, useState } from "react";
 import CourseNavigation from "./Navigation";
 import { FaAlignJustify } from "react-icons/fa";
-import { courses } from "../../Database";
-import Breadcrumb from "./Breadcrumb";
+import { useSelector } from "react-redux";
+import { useParams } from "next/navigation";
+import { RootState } from "../../store";
 
-export default async function CoursesLayout(
-  { children, params }: Readonly<{ children: ReactNode; params: Promise<{ cid: string }> }>
-) {
-  const { cid } = await params;
-  const course = courses.find((course) => course._id === cid);
+
+export default function CoursesLayout({ children }: { children: ReactNode }) {
+  const { cid } = useParams();
+ const { courses } = useSelector((state: RootState) => state.coursesReducer);
+
+ const [isNavigationVisible, setIsNavigationVisible] = useState(true);
+
+ const toggleNavigation = () => {
+  setIsNavigationVisible(!isNavigationVisible);
+};
+
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ const course = courses.find((course: any) => course._id === cid);
 
   return (
     <div id="wd-courses">
       <h2 className="text-danger"> 
-        <FaAlignJustify className="me-4 fs-4 mb-1" />
-        <Breadcrumb course={course} /> </h2> <hr />
+        <FaAlignJustify className="me-4 fs-4 mb-1" onClick={() => toggleNavigation()} style={{ cursor: "pointer" }}/>
+        {course?.name} 
+        </h2> <hr />
   <div className="d-flex">
-    <div className="d-none d-md-block">
+    <div className={isNavigationVisible ? "d-none d-md-block" : "d-none"}>
       <CourseNavigation />
     </div>
     <div className="flex-fill">
