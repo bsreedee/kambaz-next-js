@@ -1,23 +1,37 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 import { useDispatch, useSelector } from "react-redux";
 import { addNewCourse, deleteCourse, updateCourse } from "../Courses/reducer";
 import { RootState } from "../store";
+import * as db from "../Database";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import * as db from "../Database";
 import Link from "next/link";
 import { Button, Card, CardBody, CardImg, CardText, CardTitle, Col, FormControl, Row } from "react-bootstrap";
 
 export default function Dashboard() {
   const { courses } = useSelector((state: RootState) => state.coursesReducer);
+  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
+  const { enrollments } = db;
   const dispatch = useDispatch();
 
+  
   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
    const [course, setCourse] = useState<any>({
     _id: "0", name: "New Course", number: "New Number",
     startDate: "2023-09-10", endDate: "2023-12-15",
     image: "/blank_image.jpg", description: "New Description"
   });
+  if (!currentUser) {
+  return (
+    <div className="p-4 text-center">
+        <h2>Please sign in to view your courses.</h2>
+        <Link href="/Account/Signin" className="btn btn-danger mt-3">
+          Go to Sign In
+        </Link>
+      </div>
+  );
+}
   // const addNewCourse = () => {
   //   const newCourse = { ...course, _id: uuidv4() };
   //   setCourses([...courses, newCourse ]);
@@ -49,12 +63,26 @@ export default function Dashboard() {
       <FormControl as="textarea" value={course.description} rows={3}
       onChange={(e) => setCourse({ ...course, description: e.target.value }) }/>
       <hr />
-      <h2 id="wd-dashboard-published">Published Courses ({courses.length})</h2>
+      <h2 id="wd-dashboard-published">Published Courses ({
+        courses.filter((course) =>
+          enrollments.some(
+            (enrollment) =>
+              enrollment.user === (currentUser as any)._id &&
+              enrollment.course === course._id
+          )
+        ).length
+      })</h2>
       <hr />
       <div id="wd-dashboard-courses">
       <Row xs={1} md={5} className="g-4">
-        {courses.map((course) => (
-
+        {courses
+          .filter((course) =>
+            enrollments.some(
+              (enrollment) =>
+                enrollment.user === (currentUser as any)._id &&
+                enrollment.course === course._id
+            ))
+          .map((course) => (
         <Col className="wd-dashboard-course"  style={{ width: "300px" }} key={course._id}>
         <Card>
           <Link href={`/Courses/${course._id}/Home`} 
