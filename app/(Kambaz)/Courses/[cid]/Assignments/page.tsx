@@ -100,9 +100,9 @@ export default function Assignments() {
               </div>
             </div>
             <div className="d-flex align-items-center gap-2">
+              <AssignmentControlButtons/>
               {isFaculty && (
                 <>
-                  <AssignmentControlButtons/>
                   <FaTrash 
                     className="text-danger me-2 fs-4" 
                     style={{cursor: "pointer"}}
