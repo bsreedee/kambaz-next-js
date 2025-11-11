@@ -21,9 +21,7 @@ export default function Modules() {
   const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const dispatch = useDispatch();
   
-  const isFaculty = (currentUser as any)?.role === "FACULTY" || 
-                   (currentUser as any)?.role === "TA" || 
-                   (currentUser as any)?.role === "ADMIN";
+  const isFaculty = (currentUser as any)?.role === "FACULTY";
 
   return (
     <div className="wd-modules">
@@ -83,7 +81,7 @@ export default function Modules() {
               <ListGroupItem key={lesson._id} className="wd-lesson p-3 ps-1"> 
                 <BsGripVertical className="me-2 fs-3" /> 
                 {lesson.name} 
-                {isFaculty && <LessonControlButtons />}
+                <LessonControlButtons />
               </ListGroupItem>
               ))}
             </ListGroup>

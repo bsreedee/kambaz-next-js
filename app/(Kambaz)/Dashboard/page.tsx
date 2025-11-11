@@ -34,11 +34,8 @@ export default function Dashboard() {
     );
   }
 
-  const isFaculty = (currentUser as any)?.role === "FACULTY" || 
-                   (currentUser as any)?.role === "TA" || 
-                   (currentUser as any)?.role === "ADMIN";
+  const isFaculty = (currentUser as any)?.role === "FACULTY";
 
-  // Filter courses based on enrollment and showAllCourses state
   const displayedCourses = showAllCourses 
     ? courses 
     : courses.filter((course) =>
