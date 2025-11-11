@@ -29,8 +29,7 @@ export default function ArrayStateVariable() {
     <div id="wd-array-state-variables" className="mt-3">
       <h2>Array State Variables</h2>
 
-      {/* Local Array Section */}
-      <button onClick={addElement} className="btn btn-primary mb-2">
+      <button onClick={addElement} className="btn btn-success mb-2">
         Add Element
       </button>
 
@@ -51,7 +50,6 @@ export default function ArrayStateVariable() {
         ))}
       </ul>
 
-      {/* Redux Todos Section */}
       <h3>Todos from Redux</h3>
       <ListGroup>
         {todos.map((todo: Todo) => (
