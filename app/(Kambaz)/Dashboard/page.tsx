@@ -3,32 +3,14 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import {
-  Button,
-  Card,
-  CardBody,
-  CardImg,
-  CardText,
-  CardTitle,
-  Col,
-  Container,
-  FormControl,
-  Row,
-} from "react-bootstrap";
+
 import { useDispatch, useSelector } from "react-redux";
 import * as client from "../Courses/client";
-import {
-  addNewCourse,
-  deleteCourse,
-  updateCourse,
-  setCourses,
-} from "../Courses/reducer";
-import {
-  setEnrollments,
-  addEnrollment,
-  removeEnrollment,
-} from "../Courses/enrollmentsReducer";
+import { addNewCourse, deleteCourse, updateCourse, setCourses,} from "../Courses/reducer";
+import {setEnrollments, addEnrollment, removeEnrollment,} from "../Courses/enrollmentsReducer";
 import { redirect } from "next/navigation";
+import { Button, Card, CardBody, CardImg, CardText, CardTitle, Col, Container, FormControl, Row } from "react-bootstrap";
+
 export default function Dashboard() {
   const { courses } = useSelector((state: any) => state.coursesReducer);
   const { currentUser } = useSelector((state: any) => state.accountReducer);
@@ -39,7 +21,7 @@ export default function Dashboard() {
     number: "New Number",
     startDate: "2023-09-10",
     endDate: "2023-12-15",
-    image: "blank_image.jpg",
+    image: "/images/blankimage.jpg",
     description: "New Description",
   });
   const fetchCourses = async () => {
@@ -201,7 +183,7 @@ export default function Dashboard() {
                     }}
                   >
                     <CardImg
-                      src={`/images/${course.image}`}
+                      src={course.image}
                       variant="top"
                       width="100%"
                       height={160}

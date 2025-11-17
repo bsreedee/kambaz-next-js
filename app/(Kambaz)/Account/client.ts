@@ -3,14 +3,6 @@ import axios from "axios";
 const axiosWithCredentials = axios.create({ withCredentials: true });
 export const HTTP_SERVER = process.env.NEXT_PUBLIC_HTTP_SERVER;
 export const USERS_API = `${HTTP_SERVER}/api/users`;
-const COURSES_API = `${HTTP_SERVER}/api/courses`;
-
-
-export const findModulesForCourse = async (courseId: string) => {
-  const response = await axios
-    .get(`${COURSES_API}/${courseId}/modules`);
-  return response.data;
-};
 
 
 export const signin = async (credentials: any) => {
