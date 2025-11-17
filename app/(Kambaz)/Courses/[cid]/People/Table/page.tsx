@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { Table } from "react-bootstrap";
 import { FaUserCircle } from "react-icons/fa";
 import users from "../../../../Database/users.json";
-import enrollments from "../../../../Database/enrollments";
+import enrollments from "../../../../Database/enrollments.json";
 import React from "react";
 
 export default function PeopleTable() {
