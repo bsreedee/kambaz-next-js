@@ -38,6 +38,12 @@ export default function Labs() {
          </Link>
        </li>
        <li>
+         <Link href="/Labs/Lab5" id="wd-lab5-link">
+           Lab 5: RESTful Web APIs with Express.js
+
+         </Link>
+       </li>
+       <li>
         <Link href="/" id="wd-kambaz-link">
         Kambaz
         </Link>

@@ -1,35 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { createSlice } from "@reduxjs/toolkit";
-import { enrollments } from "../Database";
-
-const initialState = {
-  enrollments: enrollments,
+import { createSlice } from '@reduxjs/toolkit';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const initialState: { enrollments: any[] } = {
+  enrollments: [],
 };
-
 const enrollmentsSlice = createSlice({
-  name: "enrollments",
-  initialState,
-  reducers: {
-    enrollUser: (state, { payload: { userId, courseId } }) => {
-      const existingEnrollment = state.enrollments.find(
-        (e: any) => e.user === userId && e.course === courseId
-      );
-      if (!existingEnrollment) {
-        state.enrollments.push({
-          _id: `${userId}_${courseId}`,
-          user: userId,
-          course: courseId,
-          enrolledAt: new Date().toISOString(),
-        } as any);
-      }
-    },
-    unenrollUser: (state, { payload: { userId, courseId } }) => {
-      state.enrollments = state.enrollments.filter(
-        (e: any) => !(e.user === userId && e.course === courseId)
-      );
-    },
-  },
+    name: 'enrollments',
+    initialState,
+    reducers: {
+        setEnrollments: (state, { payload: enrollments }) => {
+            state.enrollments = enrollments;
+        },
+        addEnrollment: (state, {payload: enrollment}) => {
+            state.enrollments = [...state.enrollments, enrollment];
+        },
+        removeEnrollment: (state, {payload: enrollment}) => {
+            state.enrollments = state.enrollments.filter(e => e._id !== enrollment._id);
+        }
+    }
 });
-
-export const { enrollUser, unenrollUser } = enrollmentsSlice.actions;
+export const { setEnrollments, addEnrollment, removeEnrollment } = enrollmentsSlice.actions;
 export default enrollmentsSlice.reducer;
