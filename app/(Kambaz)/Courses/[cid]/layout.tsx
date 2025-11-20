@@ -17,6 +17,7 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
   setIsNavigationVisible(!isNavigationVisible);
 };
 
+
  // eslint-disable-next-line @typescript-eslint/no-explicit-any
  const course = courses.find((course: any) => course._id === cid);
 
