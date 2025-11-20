@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Form, Button, Row, Col } from "react-bootstrap";
+import { Form, Button, Row, Col, Container } from "react-bootstrap";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { RootState } from "../../../../store";
 import { addAssignment, updateAssignment } from "../reducer";
+import * as client from "../client";
 
 const toLocalInput = (value?: string) => {
   if (!value) return "";
@@ -26,86 +27,101 @@ export default function AssignmentEditor() {
 
   const isNew = aid === "new";
   const isFaculty = (currentUser as any)?.role === "FACULTY";
+  const viewMode = !isFaculty;
 
-  const existing = useMemo(
-    () => assignments.find((a: any) => a.course === cid && a._id === aid),
-    [assignments, cid, aid]
-  );
+  const existingAssignment = assignments.find((a: any) => a._id === aid && a.course === cid);
 
-  const [form, setForm] = useState({
-    title: existing?.title ?? "",
-    description: existing?.description ?? "",
-    points: existing?.points ?? 100,
-    dueDate: existing?.end ?? "",
-    availableFrom: existing?.start ?? "",
-    availableUntil: existing?.end ?? "",
-    assignmentGroup: "assignments",
-    displayGradeAs: "percentage",
-    submissionType: "online",
-    assignTo: "Everyone",
-    onlineEntryOptions: {
-      textEntry: false,
-      websiteUrl: true,
-      mediaRecordings: false,
-      studentAnnotation: false,
-      fileUploads: false,
-    },
+  const [assignmentState, setAssignmentState] = useState({
+    _id: isNew ? `A${Date.now()}` : aid,
+    title: "",
+    description: "",
+    course: cid,
+    points: 100,
+    start: "",
+    end: "",
+    availableUntil: "",
+    modules: [] as string[]
   });
 
-  const handleSave = () => {
-    if (!isFaculty) return; // Students cannot save
-    
-    if (isNew) {
-      dispatch(
-        addAssignment({
-          title: form.title,
-          description: form.description,
-          course: cid,
-          start: form.availableFrom,
-          end: form.dueDate,
-          points: form.points,
-        } as any)
-      );
-    } else if (existing) {
-      dispatch(
-        updateAssignment({
-          ...existing,
-          title: form.title,
-          description: form.description,
-          start: form.availableFrom,
-          end: form.dueDate,
-          points: form.points,
-        } as any)
-      );
+  useEffect(() => {
+    if (existingAssignment && !isNew) {
+      setAssignmentState({
+        _id: existingAssignment._id,
+        title: existingAssignment.title || "",
+        description: existingAssignment.description || "",
+        course: existingAssignment.course,
+        points: existingAssignment.points || 100,
+        start: existingAssignment.start || "",
+        end: existingAssignment.end || "",
+        availableUntil: existingAssignment.availableUntil || "",
+        modules: existingAssignment.modules || []
+      });
     }
+  }, [existingAssignment, isNew, cid]);
+
+  const handleInputChange = (field: string, value: any) => {
+    setAssignmentState(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleModuleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedOptions = Array.from(e.target.selectedOptions);
+    const selectedModules = selectedOptions.map(option => option.value);
+    setAssignmentState(prev => ({
+      ...prev,
+      modules: selectedModules
+    }));
+  };
+
+  const onCreateAssignment = async () => {
+    try {
+      const newAssignment = await client.createAssignmentForCourse(cid, assignmentState);
+      dispatch(addAssignment(newAssignment));
+      router.push(`/Courses/${cid}/Assignments`);
+    } catch (error) {
+      console.error("Failed to create assignment:", error);
+    }
+  };
+
+  const onUpdateAssignment = async () => {
+    try {
+      const updatedAssignment = await client.updateAssignment(assignmentState);
+      dispatch(updateAssignment(updatedAssignment));
+      router.push(`/Courses/${cid}/Assignments`);
+    } catch (error) {
+      console.error("Failed to update assignment:", error);
+    }
+  };
+
+  const handleCancel = () => {
     router.push(`/Courses/${cid}/Assignments`);
   };
 
-  const handleCancel = () => router.push(`/Courses/${cid}/Assignments`);
-
-  if (!isNew && !existing) {
+  if (!isNew && !existingAssignment) {
     return (
-      <div className="mb-3 p-3">
+      <Container className="mb-3 p-3">
         <h3>Assignment not found</h3>
         <Link href={`/Courses/${cid}/Assignments`} className="btn btn-secondary">
           Back to Assignments
         </Link>
-      </div>
+      </Container>
     );
   }
 
   return (
-    <div id="wd-assignments-editor" className="p-3">
+    <Container id="wd-assignments-editor" className="p-3">
       <Form>
-       
         <div className="mb-3">
           <Form.Label htmlFor="wd-name"><strong>Assignment Name</strong></Form.Label>
           <Form.Control
             id="wd-name"
             type="text"
-            value={form.title}
-            onChange={(e) => isFaculty && setForm({ ...form, title: e.target.value })}
-            readOnly={!isFaculty}
+            value={assignmentState.title}
+            onChange={(e) => handleInputChange("title", e.target.value)}
+            readOnly={viewMode}
+            placeholder="Enter assignment name"
           />
         </div>
 
@@ -115,50 +131,13 @@ export default function AssignmentEditor() {
             as="textarea"
             id="wd-description"
             rows={10}
-            value={form.description}
-            onChange={(e) => isFaculty && setForm({ ...form, description: e.target.value })}
-            readOnly={!isFaculty}
+            value={assignmentState.description}
+            onChange={(e) => handleInputChange("description", e.target.value)}
+            readOnly={viewMode}
+            placeholder="Enter assignment description"
           />
         </div>
 
-      
-        <Row className="mb-3">
-          <Form.Label column sm={3} htmlFor="wd-group" className="text-end">
-            Assignment Group
-          </Form.Label>
-          <Col sm={9}>
-            <Form.Select
-              id="wd-group"
-              value={form.assignmentGroup}
-              onChange={(e) => isFaculty && setForm({ ...form, assignmentGroup: e.target.value })}
-              disabled={!isFaculty}
-            >
-              <option value="assignments">ASSIGNMENTS</option>
-              <option value="quizzes">QUIZZES</option>
-              <option value="exams">EXAMS</option>
-              <option value="projects">PROJECTS</option>
-            </Form.Select>
-          </Col>
-        </Row>
-
-        <Row className="mb-3">
-          <Form.Label column sm={3} htmlFor="wd-display-grade" className="text-end">
-            Display Grade as
-          </Form.Label>
-          <Col sm={9}>
-            <Form.Select
-              id="wd-display-grade"
-              value={form.displayGradeAs}
-              onChange={(e) => isFaculty && setForm({ ...form, displayGradeAs: e.target.value })}
-              disabled={!isFaculty}
-            >
-              <option value="percentage">Percentage</option>
-              <option value="points">Points</option>
-              <option value="letter">Letter Grade</option>
-              <option value="gpa">GPA Scale</option>
-            </Form.Select>
-          </Col>
-        </Row>
         <Row className="mb-3">
           <Form.Label column sm={3} htmlFor="wd-points" className="text-end">
             Points
@@ -167,114 +146,80 @@ export default function AssignmentEditor() {
             <Form.Control
               id="wd-points"
               type="number"
-              value={form.points}
-              onChange={(e) => isFaculty && setForm({ ...form, points: parseInt(e.target.value) || 0 })}
-              readOnly={!isFaculty}
+              value={assignmentState.points}
+              onChange={(e) => handleInputChange("points", parseInt(e.target.value) || 0)}
+              readOnly={viewMode}
             />
           </Col>
         </Row>
-       
-        <Row className="mb-3">
-          <Form.Label column sm={3} htmlFor="wd-submission-type" className="text-end">
-            Submission Type
-          </Form.Label>
-          <Col sm={9}>
-            <div className="border rounded p-3">
+
+        {!viewMode && (
+          <Row className="mb-3">
+            <Form.Label column sm={3} htmlFor="wd-modules" className="text-end">
+              Modules
+            </Form.Label>
+            <Col sm={9}>
               <Form.Select
-                id="wd-submission-type"
-                value={form.submissionType}
-                onChange={(e) => isFaculty && setForm({ ...form, submissionType: e.target.value })}
-                className="mb-3"
-                disabled={!isFaculty}
+                id="wd-modules"
+                multiple
+                value={assignmentState.modules}
+                onChange={handleModuleChange}
+                style={{ height: 'auto' }}
               >
-                <option value="online">Online</option>
-                <option value="on-paper">On Paper</option>
-                <option value="none">No Submission</option>
+                <option value="M1">Module 1</option>
+                <option value="M2">Module 2</option>
+                <option value="M3">Module 3</option>
               </Form.Select>
-
-              <div>
-                <strong className="mb-2 d-block">Online Entry Options</strong>
-                {[
-                  ["textEntry", "Text Entry"],
-                  ["websiteUrl", "Website URL"],
-                  ["mediaRecordings", "Media Recordings"],
-                  ["studentAnnotation", "Student Annotation"],
-                  ["fileUploads", "File Uploads"],
-                ].map(([key, label]) => (
-                  <Form.Check
-                    key={key}
-                    type="checkbox"
-                    id={`wd-entry-${key}`}
-                    label={label}
-                    checked={(form.onlineEntryOptions as any)[key]}
-                    onChange={(e) => isFaculty && setForm({
-                      ...form,
-                      onlineEntryOptions: {
-                        ...form.onlineEntryOptions,
-                        [key]: e.target.checked,
-                      },
-                    })}
-                    className="mb-2"
-                    disabled={!isFaculty}
-                  />
-                ))}
-              </div>
-            </div>
-          </Col>
-        </Row>
+              <Form.Text className="text-muted">
+                Hold Ctrl (or Cmd on Mac) to select multiple modules
+              </Form.Text>
+              {assignmentState.modules.length > 0 && (
+                <div className="mt-2">
+                  <small>
+                    <strong>Selected modules:</strong> {assignmentState.modules.join(", ")}
+                  </small>
+                </div>
+              )}
+            </Col>
+          </Row>
+        )}
 
         <Row className="mb-3">
-          <Form.Label column sm={3} className="text-end">Assign</Form.Label>
+          <Form.Label column sm={3} className="text-end">Availability</Form.Label>
           <Col sm={9}>
             <div className="border rounded p-3">
               <div className="mb-3">
-                <Form.Label htmlFor="wd-assign-to"><strong>Assign to</strong></Form.Label>
+                <Form.Label htmlFor="wd-start"><strong>Start</strong></Form.Label>
                 <Form.Control
-                  id="wd-assign-to"
-                  type="text"
-                  value={form.assignTo}
-                  onChange={(e) => isFaculty && setForm({ ...form, assignTo: e.target.value })}
-                  readOnly={!isFaculty}
+                  id="wd-start"
+                  type="datetime-local"
+                  value={toLocalInput(assignmentState.start)}
+                  onChange={(e) => handleInputChange("start", e.target.value)}
+                  readOnly={viewMode}
                 />
               </div>
 
               <div className="mb-3">
-                <Form.Label htmlFor="wd-due-date"><strong>Due</strong></Form.Label>
+                <Form.Label htmlFor="wd-end"><strong>End</strong></Form.Label>
                 <Form.Control
-                  id="wd-due-date"
+                  id="wd-end"
                   type="datetime-local"
-                  value={toLocalInput(form.dueDate)}
-                  onChange={(e) => isFaculty && setForm({ ...form, dueDate: e.target.value })}
-                  readOnly={!isFaculty}
+                  value={toLocalInput(assignmentState.end)}
+                  onChange={(e) => handleInputChange("end", e.target.value)}
+                  readOnly={viewMode}
                 />
               </div>
 
-              <Row>
-                <Col md={6}>
-                  <div className="mb-3">
-                    <Form.Label htmlFor="wd-available-from"><strong>Available from</strong></Form.Label>
-                    <Form.Control
-                      id="wd-available-from"
-                      type="datetime-local"
-                      value={toLocalInput(form.availableFrom)}
-                      onChange={(e) => isFaculty && setForm({ ...form, availableFrom: e.target.value })}
-                      readOnly={!isFaculty}
-                    />
-                  </div>
-                </Col>
-                <Col md={6}>
-                  <div className="mb-3">
-                    <Form.Label htmlFor="wd-available-until"><strong>Until</strong></Form.Label>
-                    <Form.Control
-                      id="wd-available-until"
-                      type="datetime-local"
-                      value={toLocalInput(form.availableUntil)}
-                      onChange={(e) => isFaculty && setForm({ ...form, availableUntil: e.target.value })}
-                      readOnly={!isFaculty}
-                    />
-                  </div>
-                </Col>
-              </Row>
+              <div className="mb-3">
+                <Form.Label htmlFor="wd-available-until"><strong>Available Until</strong></Form.Label>
+                <Form.Control
+                  id="wd-available-until"
+                  type="datetime-local"
+                  value={toLocalInput(assignmentState.availableUntil)}
+                  onChange={(e) => handleInputChange("availableUntil", e.target.value)}
+                  readOnly={viewMode}
+                />
+              </div>
             </div>
           </Col>
         </Row>
@@ -283,13 +228,19 @@ export default function AssignmentEditor() {
 
         <div className="d-flex justify-content-end gap-2">
           <Button variant="secondary" onClick={handleCancel}>
-            {isFaculty ? "Cancel" : "Back"}
+            {viewMode ? "Back" : "Cancel"}
           </Button>
-          {isFaculty && (
-            <Button variant="danger" onClick={handleSave}>Save</Button>
+          {!viewMode && (
+            <Button 
+              variant="danger" 
+              onClick={isNew ? onCreateAssignment : onUpdateAssignment}
+              disabled={!assignmentState.title.trim()}
+            >
+              {isNew ? "Create" : "Save"}
+            </Button>
           )}
         </div>
       </Form>
-    </div>
+    </Container>
   );
 }

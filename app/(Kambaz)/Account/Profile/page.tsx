@@ -37,7 +37,7 @@ export default function Profile() {
        <div>
       <FormControl id="wd-username" placeholder="username" className="wd-username mb-2"
           defaultValue={profile.username}
-          onChange={(e) => setProfile({ ...profile, username: e.target.value }) }/>
+          onChange={(e) => setProfile({ profile, username: e.target.value }) }/>
       <FormControl defaultValue={profile.password} placeholder="password"
           id="wd-password" className="wd-password mb-2"
       onChange={(e) => setProfile({ ...profile, password: e.target.value }) }/>

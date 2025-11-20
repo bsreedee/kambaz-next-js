@@ -24,6 +24,7 @@ export default function Dashboard() {
     image: "/images/blankimage.jpg",
     description: "New Description",
   });
+  
   const fetchCourses = async () => {
     try {
       const courses = await client.findMyCourses();
@@ -34,6 +35,7 @@ export default function Dashboard() {
       console.error(error);
     }
   };
+  
   useEffect(() => {
     fetchCourses();
   }, [currentUser]);
@@ -85,18 +87,52 @@ export default function Dashboard() {
   };
 
   const onAddEnrollment = async (courseId: string) => {
-    const newEnrollment = await client.enrollInCourse(
-      currentUser._id,
-      courseId
-    );
-    dispatch(addEnrollment(newEnrollment));
-    console.log(enrollments);
+    try {
+      console.log("Enrolling user:", currentUser._id, "in course:", courseId);
+      
+      const newEnrollment = await client.enrollInCourse(
+        currentUser._id,
+        courseId
+      );
+      
+      console.log("Enrollment response:", newEnrollment);
+      
+      // Refresh enrollments to get the complete updated list
+      const updatedEnrollments = await client.findEnrollmentsForUser(currentUser._id);
+      dispatch(setEnrollments(updatedEnrollments));
+      
+      console.log("Updated enrollments:", updatedEnrollments);
+      
+    } catch (error) {
+      console.error("Error enrolling:", error);
+    }
   };
 
   const onRemoveEnrollment = async (enrollmentId: string) => {
-    const status = await client.unenrollFromCourse(enrollmentId);
-    dispatch(removeEnrollment({ _id: enrollmentId }));
-    console.log(enrollments);
+    try {
+      console.log("Unenrolling with ID:", enrollmentId);
+      
+      const status = await client.unenrollFromCourse(enrollmentId);
+      
+      // Refresh enrollments to get the complete updated list
+      const updatedEnrollments = await client.findEnrollmentsForUser(currentUser._id);
+      dispatch(setEnrollments(updatedEnrollments));
+      
+      console.log("Unenroll response:", status);
+      console.log("Updated enrollments after unenroll:", updatedEnrollments);
+      
+    } catch (error) {
+      console.error("Error unenrolling:", error);
+    }
+  };
+
+  // Helper function to check enrollment status
+  const isEnrolled = (courseId: string) => {
+    return enrollments.some(
+      (enrollment: any) =>
+        String(enrollment.user) === String(currentUser._id) &&
+        String(enrollment.course) === String(courseId)
+    );
   };
 
   return (
@@ -140,11 +176,7 @@ export default function Dashboard() {
         </>
       )}
       <h2 id="wd-dashboard-published">
-        Published Courses (
-        {
-          courses.length
-        }
-        )
+        Published Courses ({courses.length})
         {studentView && (
           <Button
             variant="primary"
@@ -152,98 +184,97 @@ export default function Dashboard() {
             style={{ marginTop: "-4px" }}
             onClick={onShowEnrollments}
           >
-            Enrollments
+            {showEnrollments ? "My Courses" : "Enrollments"}
           </Button>
         )}
       </h2>
       <hr />
       <div id="wd-dashboard-courses">
         <Row xs={1} md={5} className="g-4">
-          {courses
-            .map((course: any) => (
-              <Col
-                className="wd-dashboard-course"
-                key={course._id}
-                style={{ width: "300px" }}
+          {courses.map((course: any) => (
+            <Col
+              className="wd-dashboard-course"
+              key={course._id}
+              style={{ width: "300px" }}
+            >
+              <Link
+                href={`/Courses/${course._id}/Home`}
+                className="wd-dashboard-course-link text-decoration-none text-dark"
+                onClick={(e) => {
+                  if (studentView && !isEnrolled(course._id)) {
+                    e.preventDefault();
+                  }
+                }}
+                style={{ textDecoration: 'none' }}
               >
-                <Card>
-                  <Link
-                    href={`/Courses/${course._id}/Home`}
-                    className="wd-dashboard-course-link text-decoration-none text-dark"
-                    onClick={(e) => {
-                      if (
-                        !enrollments.some(
-                          (enrollment: any) =>
-                            enrollment.user === currentUser._id &&
-                            enrollment.course === course._id
-                        )
-                      ) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    <CardImg
-                      src={course.image}
-                      variant="top"
-                      width="100%"
-                      height={160}
-                    />
-                    <CardBody className="card-body">
-                      <CardTitle className="wd-dashboard-course-title text-nowrap overflow-hidden">
-                        {course.name}
-                      </CardTitle>
-                      <CardText
-                        className="wd-dashboard-course-description overflow-hidden"
-                        style={{ height: "100px" }}
-                      >
-                        {course.description}
-                      </CardText>
-                      {!showEnrollments && (
-                        <Button variant="success"> Go </Button>
+                <Card className="h-100">
+                  <CardImg
+                    src={course.image}
+                    variant="top"
+                    width="100%"
+                    height={160}
+                  />
+                  <CardBody className="card-body d-flex flex-column">
+                    <CardTitle className="wd-dashboard-course-title text-nowrap overflow-hidden">
+                      {course.name}
+                    </CardTitle>
+                    <CardText
+                      className="wd-dashboard-course-description overflow-hidden flex-grow-1"
+                      style={{ height: "100px" }}
+                    >
+                      {course.description}
+                    </CardText>
+                    
+                    {/* Action Buttons - Moved outside the main Link to prevent navigation on button clicks */}
+                    <div className="mt-auto">
+                      {!showEnrollments && isEnrolled(course._id) && (
+                        <Button variant="success" className="w-100">Go</Button>
                       )}
-                      {showEnrollments &&
-                        !enrollments.some(
-                          (enrollment: any) =>
-                            enrollment.user === currentUser._id &&
-                            enrollment.course === course._id
-                        ) && (
-                          <Button
-                            variant="success"
-                            onClick={() => onAddEnrollment(course._id)}
-                          >
-                            Enroll
-                          </Button>
-                        )}
-                      {showEnrollments &&
-                        enrollments.some(
-                          (enrollment: any) =>
-                            enrollment.user === currentUser._id &&
-                            enrollment.course === course._id
-                        ) && (
-                          <Button
-                            variant="danger"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              onRemoveEnrollment(
-                                enrollments.find(
-                                  (enrollment: any) =>
-                                    enrollment.user === currentUser._id &&
-                                    enrollment.course === course._id
-                                )?._id
-                              );
-                            }}
-                          >
-                            Unenroll
-                          </Button>
-                        )}
+                      
+                      {showEnrollments && !isEnrolled(course._id) && (
+                        <Button
+                          variant="success"
+                          className="w-100"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onAddEnrollment(course._id);
+                          }}
+                        >
+                          Enroll
+                        </Button>
+                      )}
+                      
+                      {showEnrollments && isEnrolled(course._id) && (
+                        <Button
+                          variant="danger"
+                          className="w-100"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const enrollment = enrollments.find(
+                              (enrollment: any) =>
+                                String(enrollment.user) === String(currentUser._id) &&
+                                String(enrollment.course) === String(course._id)
+                            );
+                            if (enrollment) {
+                              onRemoveEnrollment(enrollment._id);
+                            }
+                          }}
+                        >
+                          Unenroll
+                        </Button>
+                      )}
+                      
                       {facultyView && (
-                        <>
+                        <div className="d-flex gap-2 mt-2">
                           <button
                             onClick={(event) => {
                               event.preventDefault();
+                              event.stopPropagation();
                               onDeleteCourse(course._id);
                             }}
-                            className="btn btn-danger float-end"
+                            className="btn btn-danger flex-fill"
                             id="wd-delete-course-click"
                           >
                             Delete
@@ -252,19 +283,21 @@ export default function Dashboard() {
                             id="wd-edit-course-click"
                             onClick={(event) => {
                               event.preventDefault();
+                              event.stopPropagation();
                               setCourse(course);
                             }}
-                            className="btn btn-warning me-2 float-end"
+                            className="btn btn-warning flex-fill"
                           >
                             Edit
                           </button>
-                        </>
+                        </div>
                       )}
-                    </CardBody>
-                  </Link>
+                    </div>
+                  </CardBody>
                 </Card>
-              </Col>
-            ))}
+              </Link>
+            </Col>
+          ))}
         </Row>
       </div>
     </Container>

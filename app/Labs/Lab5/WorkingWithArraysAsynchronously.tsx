@@ -10,8 +10,6 @@ import { TiDelete } from "react-icons/ti";
 export default function WorkingWithArraysAsynchronously() {
   const [todos, setTodos] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState(null);
-  
-
   const fetchTodos = async () => {
     const todos = await client.fetchTodos();
     setTodos(todos);
