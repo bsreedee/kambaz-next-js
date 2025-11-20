@@ -24,7 +24,7 @@ export default function CoursesLayout({ children }: { children: ReactNode }) {
     <div id="wd-courses">
       <h2 className="text-danger"> 
         <FaAlignJustify className="me-4 fs-4 mb-1" onClick={() => toggleNavigation()} style={{ cursor: "pointer" }}/>
-        {course?.name} 
+        {cid}
         </h2> <hr />
   <div className="d-flex">
     <div className={isNavigationVisible ? "d-none d-md-block" : "d-none"}>
