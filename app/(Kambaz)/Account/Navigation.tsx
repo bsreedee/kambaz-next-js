@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,6 +16,8 @@ export default function AccountNavigation() {
          <NavLink as={Link} href={link} active={pathname.endsWith(link.toLowerCase())}>
            {link} </NavLink> </NavItem>
      ))}
+     {(currentUser as any)?.role === "ADMIN" && (
+       <NavLink as={Link} href={`/Account/Users`}  active={pathname.endsWith('Users')}> Users </NavLink> )}
    </Nav>
 );}
 
