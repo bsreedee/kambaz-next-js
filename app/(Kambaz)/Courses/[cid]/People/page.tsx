@@ -5,6 +5,6 @@ export default function People() {
     <div>
       <h2>People</h2>
       <hr />
-      <PeopleTable/>
+      <PeopleTable users={[]} fetchUsers={() => {}}/>
     </div>
 );}
