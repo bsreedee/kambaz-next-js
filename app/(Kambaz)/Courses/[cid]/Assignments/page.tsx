@@ -92,6 +92,7 @@ export default function Assignments() {
             id="wd-search-assignment"
             className="search-input"
           />
+          
         </InputGroup>
         {currentUser?.role === "FACULTY" && (
           <>
