@@ -10,6 +10,7 @@ import { addNewCourse, deleteCourse, updateCourse, setCourses,} from "../Courses
 import {setEnrollments, addEnrollment, removeEnrollment,} from "../Courses/enrollmentsReducer";
 import { redirect } from "next/navigation";
 import { Button, Card, CardBody, CardImg, CardText, CardTitle, Col, Container, FormControl, Row } from "react-bootstrap";
+import { current } from "@reduxjs/toolkit";
 
 export default function Dashboard() {
   const { courses } = useSelector((state: any) => state.coursesReducer);
@@ -85,7 +86,7 @@ export default function Dashboard() {
   };
 
   const onAddEnrollment = async (courseId: string) => {
-    const newEnrollment = await client.enrollInCourse(
+    const newEnrollment = await client.enrollIntoCourse(
       currentUser._id,
       courseId
     );
@@ -93,12 +94,16 @@ export default function Dashboard() {
     console.log(enrollments);
   };
 
-  const onRemoveEnrollment = async (enrollmentId: string) => {
-    const status = await client.unenrollFromCourse(enrollmentId);
-    dispatch(removeEnrollment({ _id: enrollmentId }));
-    console.log(enrollments);
-  };
+  const onRemoveEnrollment = async (courseId: string) => {
+  await client.unenrollFromCourse(currentUser._id, courseId);
 
+  const enrollment = enrollments.find(
+    (e: any) => e.user === currentUser._id && e.course === courseId
+  );
+  if (enrollment) {
+    dispatch(removeEnrollment(enrollment));
+  }
+};
   return (
     <Container id="wd-dashboard">
       <h1 id="wd-dashboard-title">Dashboard</h1>
@@ -199,7 +204,7 @@ export default function Dashboard() {
                         {course.description}
                       </CardText>
                      
-                      <Button variant="success"> Go </Button>
+                      <Button variant="success" style = {{marginRight: "5px"}}> Go </Button>
                      
                       {showEnrollments &&
                         !enrollments.some(
@@ -225,11 +230,7 @@ export default function Dashboard() {
                             onClick={(e) => {
                               e.preventDefault();
                               onRemoveEnrollment(
-                                enrollments.find(
-                                  (enrollment: any) =>
-                                    enrollment.user === currentUser._id &&
-                                    enrollment.course === course._id
-                                )?._id
+                                course._id
                               );
                             }}
                           >
