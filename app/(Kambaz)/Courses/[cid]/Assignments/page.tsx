@@ -70,13 +70,15 @@ export default function Assignments() {
     setAid(assignmentId);
     setShow(true);
   };
+  
   const onRemoveAssignment = async (assignmentId: string) => {
-    try {
-      await client.deleteAssignment(assignmentId);
-    } catch {
-    }
-    dispatch(deleteAssignment(assignmentId));
-  };
+  try {
+    await client.deleteAssignment(assignmentId);
+  } catch {
+  }
+  dispatch(deleteAssignment({ _id: assignmentId }));
+};
+
   return (
   <Container id="wd-assignments">
       <div className="d-flex align-items-center gap-2">
