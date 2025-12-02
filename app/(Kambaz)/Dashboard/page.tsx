@@ -91,7 +91,6 @@ export default function Dashboard() {
     );
     dispatch(addEnrollment(newEnrollment));
     console.log(enrollments);
-    await fetchCourses();
   };
 
   const onRemoveEnrollment = async (enrollmentId: string) => {
