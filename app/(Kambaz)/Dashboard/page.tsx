@@ -91,6 +91,7 @@ export default function Dashboard() {
     );
     dispatch(addEnrollment(newEnrollment));
     console.log(enrollments);
+    await fetchCourses();
   };
 
   const onRemoveEnrollment = async (enrollmentId: string) => {
@@ -152,7 +153,7 @@ export default function Dashboard() {
             style={{ marginTop: "-4px" }}
             onClick={onShowEnrollments}
           >
-            Enrollments
+            {showEnrollments ? "My Courses" : "Enrollments"}
           </Button>
         )}
       </h2>
@@ -199,7 +200,7 @@ export default function Dashboard() {
                         {course.description}
                       </CardText>
                      
-                      <Button variant="success"> Go </Button>
+                      <Button variant="success" style = {{marginRight: "5px"}}> Go </Button>
                      
                       {showEnrollments &&
                         !enrollments.some(
