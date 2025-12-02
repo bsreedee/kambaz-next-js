@@ -152,7 +152,7 @@ export default function Dashboard() {
             style={{ marginTop: "-4px" }}
             onClick={onShowEnrollments}
           >
-            {showEnrollments ? "My Courses" : "Enrollments"}
+            Enrollments
           </Button>
         )}
       </h2>
@@ -199,7 +199,7 @@ export default function Dashboard() {
                         {course.description}
                       </CardText>
                      
-                      <Button variant="success"  style = {{marginRight: "5px"}}> Go </Button>
+                      <Button variant="success"> Go </Button>
                      
                       {showEnrollments &&
                         !enrollments.some(
