@@ -152,7 +152,7 @@ export default function Dashboard() {
             style={{ marginTop: "-4px" }}
             onClick={onShowEnrollments}
           >
-            Enrollments
+            {showEnrollments ? "My Courses" : "Enrollments"}
           </Button>
         )}
       </h2>
