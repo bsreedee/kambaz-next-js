@@ -199,7 +199,7 @@ export default function Dashboard() {
                         {course.description}
                       </CardText>
                      
-                      <Button variant="success"> Go </Button>
+                      <Button variant="success"  style = {{marginRight: "5px"}}> Go </Button>
                      
                       {showEnrollments &&
                         !enrollments.some(
