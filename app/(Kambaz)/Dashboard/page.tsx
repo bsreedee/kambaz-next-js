@@ -2,8 +2,6 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-
 import { useDispatch, useSelector } from "react-redux";
 import * as client from "../Courses/client";
 import { addNewCourse, deleteCourse, updateCourse, setCourses,} from "../Courses/reducer";
