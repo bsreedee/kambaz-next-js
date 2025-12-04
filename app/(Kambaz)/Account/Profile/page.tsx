@@ -7,7 +7,7 @@ import { setCurrentUser } from "../reducer";
 import * as client from "../client";
 import { RootState } from "../../store";
 import Link from "next/link";
-import { Button, FormControl, FormSelect } from "react-bootstrap";
+import { Button, FormControl, FormSelect, Form } from "react-bootstrap";
 
 export default function Profile() {
  const [profile, setProfile] = useState<any>({});
