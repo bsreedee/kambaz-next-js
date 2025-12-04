@@ -45,16 +45,36 @@ export default function Profile() {
       onChange={(e) => setProfile({ ...profile, firstName: e.target.value }) }/>
       <FormControl defaultValue={profile.lastName} id="wd-lastname" placeholder="Last Name" className="wd-lastname mb-2"
       onChange={(e) => setProfile({ ...profile, lastName: e.target.value }) }/>
-      <FormControl defaultValue={profile.dob} type="date" id="wd-dob" className="wd-dob mb-2" placeholder="Date of Birth"
-      onChange={(e) => setProfile({ ...profile, dob: e.target.value }) }/>
+      <Form.Control
+        type="date"
+        id="wd-dob"
+        className="mb-3"
+        value={profile.dob ? profile.dob.substring(0, 10) : ""}
+        onChange={(e) =>
+          setProfile({
+            ...profile,
+            dob: e.target.value,
+          })
+        }
+      />
       <FormControl defaultValue={profile.email} type="email" id="wd-email" placeholder="Email" className="wd-email mb-2"
       onChange={(e) => setProfile({ ...profile, email: e.target.value }) }/>
-      <FormSelect defaultValue={profile.role}  id="wd-role" className="mb-3">
-        <option value="USER">User</option>
-        <option value="ADMIN">Admin</option>
-        <option value="FACULTY">Faculty</option>
-        <option value="STUDENT">Student</option>
-      </FormSelect>
+      <FormSelect
+          id="wd-role"
+          className="mb-3"
+          value={profile.role ?? "USER"}
+          onChange={(e) =>
+            setProfile({
+              ...profile,
+              role: e.target.value,
+            })
+          }
+        >
+      <option value="USER">User</option>
+      <option value="ADMIN">Admin</option>
+      <option value="FACULTY">Faculty</option>
+      <option value="STUDENT">Student</option>
+    </FormSelect>
       <button onClick={updateProfile} className="btn btn-primary w-100 mb-2"> Update </button>
        <Button onClick={signout} className="w-100 mb-2 btn-danger" id="wd-signout-btn">
            Sign out
