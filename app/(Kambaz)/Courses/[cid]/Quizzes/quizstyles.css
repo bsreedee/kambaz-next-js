@@ -1,0 +1,6 @@
+/* Green vertical line on the left of each quiz row, Canvas-style */
+.wd-quiz-row {
+  border-left: 2.5px solid #2d8a34; /* green */
+  border-radius: 0;
+}
+

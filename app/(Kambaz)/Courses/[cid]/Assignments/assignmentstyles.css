@@ -53,3 +53,9 @@
 .link-primary:hover {
   text-decoration: underline;
 }
+
+/* Green vertical line on the left of each assignment row */
+.wd-lesson {
+  border-left: 4px solid #2d8a34; /* Canvas green-ish */
+  border-radius: 0;
+}
