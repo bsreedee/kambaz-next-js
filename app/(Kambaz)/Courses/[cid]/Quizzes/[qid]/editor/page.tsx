@@ -15,12 +15,16 @@ export default function QuizEditorPage() {
   const { cid, qid } = useParams() as { cid: string; qid: string };
   const router = useRouter();
   const dispatch = useDispatch();
-  
-  const [activeTab, setActiveTab] = useState<"details" | "questions">("details");
+
+  const [activeTab, setActiveTab] = useState<"details" | "questions">(
+    "details"
+  );
   const [quiz, setQuiz] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
+  const { currentUser } = useSelector(
+    (state: RootState) => state.accountReducer
+  );
   const isFaculty = (currentUser as any)?.role === "FACULTY";
 
   useEffect(() => {
@@ -55,7 +59,10 @@ export default function QuizEditorPage() {
 
   const handleSaveAndPublish = async (updatedQuiz: any) => {
     try {
-      const saved = await client.updateQuiz({ ...updatedQuiz, published: true });
+      const saved = await client.updateQuiz({
+        ...updatedQuiz,
+        published: true,
+      });
       dispatch(updateQuiz(saved));
       router.push(`/Courses/${cid}/Quizzes`);
     } catch (error) {
@@ -64,7 +71,8 @@ export default function QuizEditorPage() {
   };
 
   const handleCancel = () => {
-    router.push(`/Courses/${cid}/Quizzes`);
+    // Go back to the Quiz Details page (initial page when clicking a quiz)
+    router.push(`/Courses/${cid}/Quizzes/${qid}`);
   };
 
   if (loading) {
@@ -83,10 +91,16 @@ export default function QuizEditorPage() {
     );
   }
 
-  const totalPoints = quiz.questions?.reduce((sum: number, q: any) => sum + (q.points || 0), 0) || 0;
+  const totalPoints =
+    quiz.questions?.reduce(
+      (sum: number, q: any) => sum + (q.points || 0),
+      0
+    ) || 0;
 
   return (
-    <div style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", paddingTop: "20px" }}>
+    <div
+      style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", paddingTop: "20px" }}
+    >
       <Container style={{ maxWidth: "900px" }}>
         {/* Header with Points and Status */}
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -95,8 +109,12 @@ export default function QuizEditorPage() {
             <span>
               <strong>Points:</strong> {totalPoints}
             </span>
-            <span className={`badge ${quiz?.published ? 'bg-success' : 'bg-secondary'}`}>
-              {quiz?.published ? '✓ Published' : '⭕ Not Published'}
+            <span
+              className={`badge ${
+                quiz?.published ? "bg-success" : "bg-secondary"
+              }`}
+            >
+              {quiz?.published ? "✓ Published" : "⭕ Not Published"}
             </span>
             <button className="btn btn-link text-secondary">⋮</button>
           </div>
@@ -107,28 +125,28 @@ export default function QuizEditorPage() {
           <div className="d-flex">
             <button
               className={`btn btn-link text-decoration-none px-4 py-3 ${
-                activeTab === "details" 
-                  ? "text-danger border-bottom border-danger border-3" 
+                activeTab === "details"
+                  ? "text-danger border-bottom border-danger border-3"
                   : "text-dark"
               }`}
               onClick={() => setActiveTab("details")}
-              style={{ 
+              style={{
                 borderRadius: 0,
-                fontWeight: activeTab === "details" ? "600" : "normal"
+                fontWeight: activeTab === "details" ? "600" : "normal",
               }}
             >
               Details
             </button>
             <button
               className={`btn btn-link text-decoration-none px-4 py-3 ${
-                activeTab === "questions" 
-                  ? "text-danger border-bottom border-danger border-3" 
+                activeTab === "questions"
+                  ? "text-danger border-bottom border-danger border-3"
                   : "text-dark"
               }`}
               onClick={() => setActiveTab("questions")}
-              style={{ 
+              style={{
                 borderRadius: 0,
-                fontWeight: activeTab === "questions" ? "600" : "normal"
+                fontWeight: activeTab === "questions" ? "600" : "normal",
               }}
             >
               Questions

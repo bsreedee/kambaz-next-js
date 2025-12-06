@@ -15,13 +15,14 @@ export default function QuizPreviewPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [startTime] = useState(new Date());
-  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
+  const { currentUser } = useSelector(
+    (state: RootState) => state.accountReducer
+  );
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await client.findQuizById(qid);
-        console.log("Loaded quiz:", data); // Debug
         setQuiz(data);
       } catch (error) {
         console.error("Error loading quiz:", error);
@@ -40,13 +41,16 @@ export default function QuizPreviewPage() {
 
   if (!quiz.questions || quiz.questions.length === 0) {
     return (
-      <Container className="mt-3">
+      <Container className="mt-3" style={{ maxWidth: "900px" }}>
+        <h3 className="mb-3">{quiz.title}</h3>
         <div className="alert alert-warning">
           This quiz has no questions yet. Add questions in the editor first.
         </div>
-        <Button 
-          variant="primary" 
-          onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}
+        <Button
+          variant="primary"
+          onClick={() =>
+            router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)
+          }
         >
           Go to Editor
         </Button>
@@ -54,34 +58,67 @@ export default function QuizPreviewPage() {
     );
   }
 
-  const currentQuestion = quiz.questions[currentQuestionIndex];
-  const totalQuestions = quiz.questions.length;
+  const questions = quiz.questions;
+  const totalQuestions = questions.length;
+  const currentQuestion = questions[currentQuestionIndex];
 
-  console.log("Current question:", currentQuestion); // Debug
-  console.log("Current answers:", answers); // Debug
+  // Robust type detection helpers - support both 'type' and 'questionType' fields
+  const isMultipleChoice = (q: any) => {
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    return (
+      t === "multiple-choice" ||
+      t === "multiple_choice" ||
+      t === "multiple choice" ||
+      t === "mc" ||
+      (Array.isArray(q.choices) && q.choices.length > 0) ||
+      (Array.isArray(q.options) && q.options.length > 0)
+    );
+  };
+
+  const isTrueFalse = (q: any) => {
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    return (
+      t === "true-false" ||
+      t === "true_false" ||
+      t === "true/false" ||
+      t === "true false" ||
+      t.includes("true") ||
+      t.includes("false") ||
+      typeof q.correctAnswer === "boolean"
+    );
+  };
+
+  const isFillInBlank = (q: any) => {
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    return (
+      t === "fill-in-blank" ||
+      t === "fill_in_blank" ||
+      t === "fill in the blank" ||
+      t.includes("blank") ||
+      t.includes("fill") ||
+      Array.isArray(q.blanks)
+    );
+  };
 
   const handleAnswerChange = (value: any) => {
-    console.log("Answer changed to:", value); // Debug
-    setAnswers({
-      ...answers,
+    setAnswers((prev) => ({
+      ...prev,
       [currentQuestion._id]: value,
-    });
+    }));
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
+    setCurrentQuestionIndex((idx) =>
+      Math.min(totalQuestions - 1, idx + 1)
+    );
   };
 
   const handlePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
+    setCurrentQuestionIndex((idx) => Math.max(0, idx - 1));
   };
 
   const handleSubmit = () => {
-    alert("Quiz submitted! (This is a preview)");
+    alert("Quiz submitted! (This is a preview; answers are not stored.)");
     router.push(`/Courses/${cid}/Quizzes/${qid}`);
   };
 
@@ -91,8 +128,13 @@ export default function QuizPreviewPage() {
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
-      hour12: true
+      hour12: true,
     });
+  };
+
+  const isAnswered = (q: any) => {
+    const value = answers[q._id];
+    return value !== undefined && value !== "";
   };
 
   return (
@@ -103,20 +145,20 @@ export default function QuizPreviewPage() {
           {/* Quiz Title */}
           <h3 className="mb-3">{quiz.title}</h3>
 
-          {/* Preview Warning Banner */}
-          <div className="alert alert-warning d-flex align-items-center mb-3">
+          {/* Preview Notice */}
+          <div className="alert alert-warning d-flex align-items-center">
             <span className="me-2">ℹ️</span>
-            <span>This is a preview of the published version of the quiz</span>
+            <span>
+              This is a preview. Your responses are not stored.
+              {currentUser && " (Faculty view)"}
+            </span>
           </div>
 
-          {/* Started Time */}
-          <p className="text-muted">Started: {formatStartTime()}</p>
-
-          {/* Quiz Instructions */}
+          {/* Optional Description */}
           {quiz.description && (
             <div className="mb-4">
               <h5>Quiz Instructions</h5>
-              <div 
+              <div
                 dangerouslySetInnerHTML={{ __html: quiz.description }}
               />
             </div>
@@ -125,25 +167,55 @@ export default function QuizPreviewPage() {
           {/* Question Display */}
           <div className="border rounded p-4 bg-white mb-4">
             <div className="d-flex justify-content-between align-items-start mb-3">
-              <h6>Question {currentQuestionIndex + 1}</h6>
-              <span className="badge bg-secondary">{currentQuestion.points} pts</span>
+              <h6>
+                Question {currentQuestionIndex + 1} of {totalQuestions}
+              </h6>
+              <span className="badge bg-secondary">
+                {currentQuestion.points || 0} pts
+              </span>
             </div>
 
-            <div 
+            {/* Question text */}
+            <div
               className="mb-4"
-              dangerouslySetInnerHTML={{ __html: currentQuestion.question || "<p>No question text</p>" }}
+              dangerouslySetInnerHTML={{
+                __html:
+                  currentQuestion.question ||
+                  "<p>No question text</p>",
+              }}
             />
 
-            {/* Multiple Choice */}
-            {currentQuestion.type === "multiple-choice" && (
+            {/* MULTIPLE CHOICE */}
+            {isMultipleChoice(currentQuestion) && (
               <div>
-                {currentQuestion.choices && currentQuestion.choices.length > 0 ? (
-                  currentQuestion.choices.map((choice: any, idx: number) => {
-                    const choiceText = choice.text || choice || "";
-                    const isSelected = answers[currentQuestion._id] === choiceText;
-                    
-                    console.log(`Choice ${idx}:`, choice, "Text:", choiceText, "Selected:", isSelected); // Debug
-                    
+                {/* Support both 'choices' (frontend format) and 'options' (database format) */}
+                {(() => {
+                  // Get choices from either 'choices' or 'options' field
+                  let choicesList: any[] = [];
+                  
+                  if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
+                    // Frontend format: array of {text, correct}
+                    choicesList = currentQuestion.choices;
+                  } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+                    // Database format: array of strings with separate correctAnswer
+                    choicesList = currentQuestion.options.map((opt: string) => ({
+                      text: opt,
+                      correct: opt === currentQuestion.correctAnswer
+                    }));
+                  }
+
+                  if (choicesList.length === 0) {
+                    return (
+                      <p className="text-muted">
+                        No answer choices available
+                      </p>
+                    );
+                  }
+
+                  return choicesList.map((choice: any, idx: number) => {
+                    const choiceText = (choice && choice.text) || choice || "";
+                    const selected = answers[currentQuestion._id] === choiceText;
+
                     return (
                       <div key={idx} className="mb-2">
                         <Form.Check
@@ -151,112 +223,119 @@ export default function QuizPreviewPage() {
                           id={`choice-${currentQuestion._id}-${idx}`}
                           name={`question-${currentQuestion._id}`}
                           label={choiceText || `Option ${idx + 1}`}
-                          checked={isSelected}
+                          checked={selected}
                           onChange={() => handleAnswerChange(choiceText)}
                         />
                       </div>
                     );
-                  })
-                ) : (
-                  <p className="text-muted">No answer choices available</p>
-                )}
+                  });
+                })()}
               </div>
             )}
 
-            {/* True/False */}
-            {currentQuestion.type === "true-false" && (
+            {/* TRUE / FALSE */}
+            {isTrueFalse(currentQuestion) && (
               <div>
                 <Form.Check
                   type="radio"
-                  id={`true-${currentQuestion._id}`}
+                  id={`tf-${currentQuestion._id}-true`}
                   name={`question-${currentQuestion._id}`}
                   label="True"
+                  className="mb-2"
                   checked={answers[currentQuestion._id] === true}
                   onChange={() => handleAnswerChange(true)}
-                  className="mb-2"
                 />
                 <Form.Check
                   type="radio"
-                  id={`false-${currentQuestion._id}`}
+                  id={`tf-${currentQuestion._id}-false`}
                   name={`question-${currentQuestion._id}`}
                   label="False"
+                  className="mb-2"
                   checked={answers[currentQuestion._id] === false}
                   onChange={() => handleAnswerChange(false)}
-                  className="mb-2"
                 />
               </div>
             )}
 
-            {/* Fill in the Blank */}
-            {currentQuestion.type === "fill-in-blank" && (
-              <Form.Control
-                type="text"
-                value={answers[currentQuestion._id] || ""}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                placeholder="Type your answer here"
-                style={{ maxWidth: "300px" }}
-              />
+            {/* FILL IN THE BLANK */}
+            {isFillInBlank(currentQuestion) && (
+              <div>
+                <p className="text-muted small mb-2">
+                  {currentQuestion.blanks && Array.isArray(currentQuestion.blanks) 
+                    ? "Type one of the possible correct answers below:"
+                    : "Type your answer below:"}
+                </p>
+                <Form.Control
+                  type="text"
+                  value={answers[currentQuestion._id] ?? ""}
+                  onChange={(e) =>
+                    handleAnswerChange(e.target.value)
+                  }
+                  placeholder="Type your answer here"
+                  style={{ maxWidth: "300px" }}
+                />
+              </div>
             )}
           </div>
 
           {/* Navigation Buttons */}
           <div className="d-flex justify-content-between mb-4">
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0}
             >
               Previous
             </Button>
-            {currentQuestionIndex < totalQuestions - 1 ? (
-              <Button 
-                variant="primary" 
-                onClick={handleNext}
-              >
-                Next
-              </Button>
-            ) : (
-              <Button 
-                variant="success" 
-                onClick={handleSubmit}
-              >
-                Submit Quiz
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              onClick={handleNext}
+              disabled={currentQuestionIndex === totalQuestions - 1}
+            >
+              Next
+            </Button>
+          </div>
+
+          {/* Submit Preview / Edit */}
+          <div className="d-flex justify-content-end gap-2 mb-4">
+            <Button
+              variant="outline-secondary"
+              onClick={() =>
+                router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)
+              }
+            >
+              Edit Quiz
+            </Button>
+            <Button variant="danger" onClick={handleSubmit}>
+              Submit Preview
+            </Button>
           </div>
 
           {/* Quiz Save Info */}
           <div className="text-center text-muted mb-3">
-            <small>Quiz saved at {formatStartTime()}</small>
-          </div>
-
-          {/* Keep Editing Button */}
-          <div className="border rounded p-3 bg-light text-center mb-4">
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}
-            >
-              ✏️ Keep Editing This Quiz
-            </Button>
+            <small>Quiz started at {formatStartTime()}</small>
           </div>
         </div>
 
         {/* Sidebar - Question Navigation */}
         <div className="col-md-4">
-          <div className="border rounded p-3 bg-white position-sticky" style={{ top: "20px" }}>
+          <div
+            className="border rounded p-3 bg-white position-sticky"
+            style={{ top: "20px" }}
+          >
             <h6 className="mb-3">Questions</h6>
             <ul className="list-unstyled">
-              {quiz.questions.map((q: any, idx: number) => (
+              {questions.map((q: any, idx: number) => (
                 <li key={q._id} className="mb-2">
                   <button
+                    type="button"
                     className={`btn btn-link text-decoration-none w-100 text-start ${
-                      idx === currentQuestionIndex ? "text-danger fw-bold" : "text-secondary"
+                      idx === currentQuestionIndex ? "fw-bold" : ""
                     }`}
                     onClick={() => setCurrentQuestionIndex(idx)}
                   >
-                    {answers[q._id] !== undefined ? (
-                      <span className="text-danger">●</span>
+                    {isAnswered(q) ? (
+                      <span className="text-success">●</span>
                     ) : (
                       <span className="text-secondary">○</span>
                     )}{" "}

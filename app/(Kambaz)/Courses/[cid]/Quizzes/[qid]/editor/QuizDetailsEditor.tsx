@@ -53,12 +53,19 @@ export default function QuizDetailsEditor({
         timeLimit: quiz.timeLimit || 20,
         hasTimeLimit: (quiz.timeLimit && quiz.timeLimit > 0) || false,
         multipleAttempts: quiz.multipleAttempts || false,
-        howManyAttempts: quiz.howManyAttempts || 1,
+        howManyAttempts:
+          quiz.howManyAttempts ??
+          quiz.attemptsAllowed ??
+          1,
         showCorrectAnswers: quiz.showCorrectAnswers || "Immediately",
         accessCode: quiz.accessCode || "",
-        oneQuestionAtATime: quiz.oneQuestionAtATime !== undefined ? quiz.oneQuestionAtATime : true,
+        oneQuestionAtATime:
+          quiz.oneQuestionAtATime !== undefined
+            ? quiz.oneQuestionAtATime
+            : true,
         webcamRequired: quiz.webcamRequired || false,
-        lockQuestionsAfterAnswering: quiz.lockQuestionsAfterAnswering || false,
+        lockQuestionsAfterAnswering:
+          quiz.lockQuestionsAfterAnswering || false,
         dueDate: toLocalInput(quiz.dueDate),
         availableDate: toLocalInput(quiz.availableDate),
         untilDate: toLocalInput(quiz.untilDate),
@@ -70,12 +77,19 @@ export default function QuizDetailsEditor({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const buildPayload = () => ({
+    ...quiz,
+    ...formData,
+    timeLimit: formData.hasTimeLimit ? formData.timeLimit : 0,
+    attemptsAllowed: formData.howManyAttempts,
+  });
+
   const handleSubmit = () => {
-    onSave({ ...quiz, ...formData, timeLimit: formData.hasTimeLimit ? formData.timeLimit : 0 });
+    onSave(buildPayload());
   };
 
   const handleSaveAndPublish = () => {
-    onSaveAndPublish({ ...quiz, ...formData, timeLimit: formData.hasTimeLimit ? formData.timeLimit : 0 });
+    onSaveAndPublish(buildPayload());
   };
 
   return (
@@ -91,17 +105,28 @@ export default function QuizDetailsEditor({
         />
       </Form.Group>
 
-      {/* Quiz Instructions - Simple Textarea (since WYSIWYG needs special setup) */}
+      {/* Quiz Instructions */}
       <Form.Group className="mb-3">
         <Form.Label className="fw-semibold">Quiz Instructions:</Form.Label>
-        <div className="border rounded" style={{ minHeight: "200px", backgroundColor: "#fafafa", padding: "10px" }}>
+        <div
+          className="border rounded"
+          style={{
+            minHeight: "200px",
+            backgroundColor: "#fafafa",
+            padding: "10px",
+          }}
+        >
           <Form.Control
             as="textarea"
             rows={6}
             value={formData.description}
             onChange={(e) => handleChange("description", e.target.value)}
             placeholder="Enter quiz instructions..."
-            style={{ border: "none", backgroundColor: "transparent", resize: "none" }}
+            style={{
+              border: "none",
+              backgroundColor: "transparent",
+              resize: "none",
+            }}
           />
           <div className="text-end mt-2">
             <small className="text-muted">0 words</small>
@@ -140,33 +165,42 @@ export default function QuizDetailsEditor({
       {/* Options Section */}
       <div className="mb-4">
         <h6 className="fw-semibold mb-3">Options</h6>
-        
+
         {/* Shuffle Answers */}
-        <Form.Check 
+        <Form.Check
           type="checkbox"
           id="shuffleAnswers"
           label="Shuffle Answers"
           checked={formData.shuffleAnswers}
-          onChange={(e) => handleChange("shuffleAnswers", e.target.checked)}
+          onChange={(e) =>
+            handleChange("shuffleAnswers", e.target.checked)
+          }
           className="mb-2"
         />
 
         {/* Time Limit */}
         <div className="mb-2">
-          <Form.Check 
+          <Form.Check
             type="checkbox"
             id="hasTimeLimit"
             label="Time Limit"
             checked={formData.hasTimeLimit}
-            onChange={(e) => handleChange("hasTimeLimit", e.target.checked)}
+            onChange={(e) =>
+              handleChange("hasTimeLimit", e.target.checked)
+            }
           />
           {formData.hasTimeLimit && (
             <div className="d-flex align-items-center mt-2 ms-4">
               <Form.Control
                 type="number"
                 value={formData.timeLimit}
-                onChange={(e) => handleChange("timeLimit", parseInt(e.target.value) || 0)}
-                min="1"
+                onChange={(e) =>
+                  handleChange(
+                    "timeLimit",
+                    parseInt(e.target.value, 10) || 0
+                  )
+                }
+                min={1}
                 style={{ width: "80px" }}
                 className="me-2"
               />
@@ -177,20 +211,111 @@ export default function QuizDetailsEditor({
 
         {/* Multiple Attempts */}
         <div className="mb-2">
-          <Form.Check 
+          <Form.Check
             type="checkbox"
             id="multipleAttempts"
             label="Allow Multiple Attempts"
             checked={formData.multipleAttempts}
-            onChange={(e) => handleChange("multipleAttempts", e.target.checked)}
+            onChange={(e) =>
+              handleChange("multipleAttempts", e.target.checked)
+            }
           />
+          {formData.multipleAttempts && (
+            <div className="d-flex align-items-center mt-2 ms-4">
+              <Form.Control
+                type="number"
+                min={1}
+                value={formData.howManyAttempts}
+                onChange={(e) =>
+                  handleChange(
+                    "howManyAttempts",
+                    parseInt(e.target.value, 10) || 1
+                  )
+                }
+                style={{ width: "80px" }}
+                className="me-2"
+              />
+              <span>allowed attempts</span>
+            </div>
+          )}
         </div>
+
+        {/* Show Correct Answers */}
+        <Form.Group className="mb-3 mt-3">
+          <Form.Label className="fw-semibold">
+            Show Correct Answers
+          </Form.Label>
+          <Form.Select
+            value={formData.showCorrectAnswers}
+            onChange={(e) =>
+              handleChange("showCorrectAnswers", e.target.value)
+            }
+          >
+            <option value="Immediately">Immediately</option>
+            <option value="Never">Never</option>
+            <option value="After Due Date">After Due Date</option>
+          </Form.Select>
+        </Form.Group>
+
+        {/* Access Code */}
+        <Form.Group className="mb-3">
+          <Form.Label className="fw-semibold">Access Code</Form.Label>
+          <Form.Control
+            type="text"
+            value={formData.accessCode}
+            onChange={(e) => handleChange("accessCode", e.target.value)}
+            placeholder="Leave blank for no access code"
+          />
+          <Form.Text muted>
+            Students must enter this code to take the quiz.
+          </Form.Text>
+        </Form.Group>
+
+        {/* Other toggles */}
+        <Form.Check
+          type="checkbox"
+          id="oneQuestionAtATime"
+          label="Show one question at a time"
+          className="mb-2"
+          checked={formData.oneQuestionAtATime}
+          onChange={(e) =>
+            handleChange("oneQuestionAtATime", e.target.checked)
+          }
+        />
+
+        <Form.Check
+          type="checkbox"
+          id="webcamRequired"
+          label="Webcam required"
+          className="mb-2"
+          checked={formData.webcamRequired}
+          onChange={(e) =>
+            handleChange("webcamRequired", e.target.checked)
+          }
+        />
+
+        <Form.Check
+          type="checkbox"
+          id="lockQuestionsAfterAnswering"
+          label="Lock questions after answering"
+          className="mb-2"
+          checked={formData.lockQuestionsAfterAnswering}
+          onChange={(e) =>
+            handleChange(
+              "lockQuestionsAfterAnswering",
+              e.target.checked
+            )
+          }
+        />
       </div>
 
       {/* Assign Section */}
-      <div className="border rounded p-3 mb-4" style={{ backgroundColor: "#f9f9f9" }}>
+      <div
+        className="border rounded p-3 mb-4"
+        style={{ backgroundColor: "#f9f9f9" }}
+      >
         <h6 className="fw-semibold mb-3">Assign</h6>
-        
+
         {/* Assign to */}
         <Form.Group className="mb-3">
           <Form.Label className="fw-semibold">Assign to</Form.Label>
@@ -216,7 +341,9 @@ export default function QuizDetailsEditor({
             <Form.Control
               type="datetime-local"
               value={formData.availableDate}
-              onChange={(e) => handleChange("availableDate", e.target.value)}
+              onChange={(e) =>
+                handleChange("availableDate", e.target.value)
+              }
             />
           </Col>
           <Col md={6}>
@@ -238,20 +365,27 @@ export default function QuizDetailsEditor({
 
       {/* Action Buttons - Canvas Style */}
       <div className="d-flex justify-content-end gap-2 pt-3 border-top">
-        <Button 
-          variant="light" 
+        <Button
+          variant="light"
           onClick={onCancel}
           className="px-4"
           style={{ border: "1px solid #ccc" }}
         >
-          Cancel
+          Back
         </Button>
-        <Button 
-          variant="danger" 
+        <Button
+          variant="danger"
           onClick={handleSubmit}
           className="px-4"
         >
           Save
+        </Button>
+        <Button
+          variant="outline-danger"
+          onClick={handleSaveAndPublish}
+          className="px-4"
+        >
+          Save &amp; Publish
         </Button>
       </div>
     </div>

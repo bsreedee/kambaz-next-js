@@ -17,7 +17,9 @@ export default function QuizQuestionsEditor({
   onCancel,
 }: QuizQuestionsEditorProps) {
   const [questions, setQuestions] = useState<any[]>([]);
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (quiz?.questions) {
@@ -28,7 +30,7 @@ export default function QuizQuestionsEditor({
   const handleAddQuestion = () => {
     const newQuestion = {
       _id: `temp_${Date.now()}`,
-      title: "Easy Question",
+      title: "Question",
       type: "multiple-choice",
       points: 4,
       question: "",
@@ -38,25 +40,38 @@ export default function QuizQuestionsEditor({
         { text: "", correct: false },
       ],
     };
-    setQuestions([...questions, newQuestion]);
+    setQuestions((prev) => [...prev, newQuestion]);
     setEditingQuestionId(newQuestion._id);
   };
 
-  const handleUpdateQuestion = (questionId: string, updatedQuestion: any) => {
-    setQuestions(
-      questions.map((q) => (q._id === questionId ? { ...q, ...updatedQuestion } : q))
+  const handleUpdateQuestion = (
+    questionId: string,
+    updatedQuestion: any
+  ) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q._id === questionId ? { ...q, ...updatedQuestion } : q
+      )
     );
     setEditingQuestionId(null);
   };
 
   const handleDeleteQuestion = (questionId: string) => {
-    setQuestions(questions.filter((q) => q._id !== questionId));
+    setQuestions((prev) => prev.filter((q) => q._id !== questionId));
     setEditingQuestionId(null);
   };
 
   const handleCancelEdit = () => {
-    // Remove temporary questions that weren't saved
-    setQuestions(questions.filter((q) => !q._id.startsWith("temp_")));
+    // If we were editing a brand-new temp question, drop just that one
+    if (
+      editingQuestionId &&
+      editingQuestionId.toString().startsWith("temp_")
+    ) {
+      setQuestions((prev) =>
+        prev.filter((q) => q._id !== editingQuestionId)
+      );
+    }
+    // For existing questions, just stop editing and keep everything as-is
     setEditingQuestionId(null);
   };
 
@@ -64,17 +79,32 @@ export default function QuizQuestionsEditor({
     const updatedQuiz = {
       ...quiz,
       questions,
-      points: questions.reduce((sum, q) => sum + (q.points || 0), 0),
+      points: questions.reduce(
+        (sum, q) => sum + (q.points || 0),
+        0
+      ),
     };
     onSave(updatedQuiz);
+  };
+
+  const handleSaveAndPublish = () => {
+    const updatedQuiz = {
+      ...quiz,
+      questions,
+      points: questions.reduce(
+        (sum, q) => sum + (q.points || 0),
+        0
+      ),
+    };
+    onSaveAndPublish(updatedQuiz);
   };
 
   return (
     <div className="quiz-questions-editor">
       {/* New Question Button - Canvas style centered */}
       <div className="text-center mb-4">
-        <Button 
-          variant="outline-secondary" 
+        <Button
+          variant="outline-secondary"
           onClick={handleAddQuestion}
           className="px-4 py-2"
         >
@@ -85,7 +115,8 @@ export default function QuizQuestionsEditor({
       {/* Questions List */}
       {questions.length === 0 && editingQuestionId === null ? (
         <div className="alert alert-info text-center">
-          No questions yet. Click &quot;+ New Question&quot; to add your first question.
+          No questions yet. Click &quot;+ New Question&quot; to add your
+          first question.
         </div>
       ) : (
         <div className="questions-list mb-4">
@@ -109,15 +140,24 @@ export default function QuizQuestionsEditor({
                           Question {index + 1}: {question.title}
                         </h6>
                         <span className="badge bg-secondary">
-                          {question.type === "multiple-choice" && "Multiple Choice"}
-                          {question.type === "true-false" && "True/False"}
-                          {question.type === "fill-in-blank" && "Fill in the Blank"}
+                          {question.type === "multiple-choice" &&
+                            "Multiple Choice"}
+                          {question.type === "true-false" &&
+                            "True/False"}
+                          {question.type === "fill-in-blank" &&
+                            "Fill in the Blank"}
                         </span>
-                        <span className="text-muted">({question.points} pts)</span>
+                        <span className="text-muted">
+                          ({question.points} pts)
+                        </span>
                       </div>
                       <div
                         className="question-preview mt-2"
-                        dangerouslySetInnerHTML={{ __html: question.question || "<em>No question text</em>" }}
+                        dangerouslySetInnerHTML={{
+                          __html:
+                            question.question ||
+                            "<em>No question text</em>",
+                        }}
                         style={{ color: "#666" }}
                       />
                     </div>
@@ -125,14 +165,18 @@ export default function QuizQuestionsEditor({
                       <Button
                         variant="outline-primary"
                         size="sm"
-                        onClick={() => setEditingQuestionId(question._id)}
+                        onClick={() =>
+                          setEditingQuestionId(question._id)
+                        }
                       >
                         Edit
                       </Button>
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        onClick={() => handleDeleteQuestion(question._id)}
+                        onClick={() =>
+                          handleDeleteQuestion(question._id)
+                        }
                       >
                         Delete
                       </Button>
@@ -147,20 +191,27 @@ export default function QuizQuestionsEditor({
 
       {/* Action Buttons - Canvas Style */}
       <div className="d-flex justify-content-end gap-2 pt-3 border-top">
-        <Button 
-          variant="light" 
+        <Button
+          variant="light"
           onClick={onCancel}
           className="px-4"
           style={{ border: "1px solid #ccc" }}
         >
           Cancel
         </Button>
-        <Button 
-          variant="danger" 
+        <Button
+          variant="danger"
           onClick={handleSave}
           className="px-4"
         >
           Save
+        </Button>
+        <Button
+          variant="outline-danger"
+          onClick={handleSaveAndPublish}
+          className="px-4"
+        >
+          Save &amp; Publish
         </Button>
       </div>
     </div>

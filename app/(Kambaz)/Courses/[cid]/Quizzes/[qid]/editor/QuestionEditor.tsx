@@ -28,7 +28,7 @@ export default function QuestionEditor({
 
   useEffect(() => {
     setFormData({
-      title: question.title || "Easy Question",
+      title: question.title || "Question",
       type: question.type || "multiple-choice",
       points: question.points || 4,
       question: question.question || "",
@@ -215,7 +215,7 @@ export default function QuestionEditor({
             value={formData.question}
             onChange={(e) => handleChange("question", e.target.value)}
             placeholder="Enter your question"
-            style={{ border: "none", backgroundColor: "transparent", resize: "none" }}
+            style={{ border: "none", resize: "none" }}
             className="p-3"
           />
         </div>

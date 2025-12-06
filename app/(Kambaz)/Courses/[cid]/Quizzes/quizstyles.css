@@ -4,3 +4,13 @@
   border-radius: 0;
 }
 
+/* Hide the dropdown caret/arrow */
+#wd-quiz-header-menu::after {
+  display: none !important;
+}
+
+/* Hide the dropdown caret/arrow for all quiz dropdowns */
+#wd-quiz-header-menu::after,
+[id^="quiz-actions-"]::after {
+  display: none !important;
+}

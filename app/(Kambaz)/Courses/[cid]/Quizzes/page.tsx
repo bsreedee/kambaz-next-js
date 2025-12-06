@@ -18,7 +18,6 @@ import {
 } from "react-bootstrap";
 
 import {
-  BsGripVertical,
   BsChevronDown,
   BsChevronRight,
 } from "react-icons/bs";
@@ -72,7 +71,9 @@ export default function QuizzesPage() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const { quizzes } = useSelector((state: RootState) => state.quizzesReducer);
+  const { quizzes } = useSelector(
+    (state: RootState) => state.quizzesReducer
+  );
   const { currentUser } = useSelector(
     (state: RootState) => state.accountReducer
   );
@@ -80,8 +81,11 @@ export default function QuizzesPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [showAssignmentQuizzes, setShowAssignmentQuizzes] = useState(true);
-  const [sortBy, setSortBy] = useState<"availableDate" | "title">("availableDate");
+  const [showAssignmentQuizzes, setShowAssignmentQuizzes] =
+    useState(true);
+  const [sortBy, setSortBy] = useState<"availableDate" | "title">(
+    "availableDate"
+  );
 
   // all quizzes for this course, sorted by selected criteria
   const courseQuizzes = useMemo(
@@ -158,7 +162,7 @@ export default function QuizzesPage() {
 
     const created = await client.createQuizForCourse(cid, defaultQuiz);
     dispatch(addQuiz(created));
-    router.push(`/Courses/${cid}/Quizzes/${created._id}`);
+    router.push(`/Courses/${cid}/Quizzes/${created._id}/editor`);
   };
 
   const handleDeleteQuiz = async (quizId: string) => {
@@ -170,7 +174,7 @@ export default function QuizzesPage() {
     try {
       await client.deleteQuiz(quizId);
     } catch {
-      // optimistic
+      // ignore
     }
     dispatch(deleteQuiz({ _id: quizId }));
   };
@@ -181,7 +185,7 @@ export default function QuizzesPage() {
     try {
       saved = await client.updateQuiz(updatedQuiz);
     } catch {
-      // optimistic
+      // ignore
     }
     dispatch(updateQuiz(saved));
   };
@@ -193,8 +197,12 @@ export default function QuizzesPage() {
         client.updateQuiz({ ...q, published: true })
       )
     );
-    const updatedMap = new Map(updatedCourseQuizzes.map((q: any) => [q._id, q]));
-    const next = quizzes.map((q: any) => updatedMap.get(q._id) ?? q);
+    const updatedMap = new Map(
+      updatedCourseQuizzes.map((q: any) => [q._id, q])
+    );
+    const next = quizzes.map(
+      (q: any) => updatedMap.get(q._id) ?? q
+    );
     dispatch(setQuizzes(next));
   };
 
@@ -205,8 +213,12 @@ export default function QuizzesPage() {
         client.updateQuiz({ ...q, published: false })
       )
     );
-    const updatedMap = new Map(updatedCourseQuizzes.map((q: any) => [q._id, q]));
-    const next = quizzes.map((q: any) => updatedMap.get(q._id) ?? q);
+    const updatedMap = new Map(
+      updatedCourseQuizzes.map((q: any) => [q._id, q])
+    );
+    const next = quizzes.map(
+      (q: any) => updatedMap.get(q._id) ?? q
+    );
     dispatch(setQuizzes(next));
   };
 
@@ -220,9 +232,31 @@ export default function QuizzesPage() {
 
   return (
     <Container id="wd-quizzes" className="mt-3">
-      {/* Header + +Quiz */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h3 className="mb-0">Quizzes</h3>
+      {/* Search box + header */}
+      <div className="d-flex justify-content-between align-items-center mb-3 gap-3">
+        {/* Search box on the left */}
+        <div className="flex-grow-1" style={{ maxWidth: 360 }}>
+          <div className="position-relative">
+            <button
+              type="button"
+              className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted border-0 bg-transparent p-0"
+              onClick={() =>
+                document.getElementById("search-input")?.focus()
+              }
+            >
+              <IoMdSearch />
+            </button>
+            <FormControl
+              id="search-input"
+              placeholder="Search for quiz"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="ps-5"
+            />
+          </div>
+        </div>
+
+        {/* + Quiz & menu on the right */}
         {isFaculty && (
           <div className="d-flex align-items-center gap-2">
             <Button
@@ -236,11 +270,11 @@ export default function QuizzesPage() {
 
             <Dropdown align="end">
               <Dropdown.Toggle
-                variant="outline-secondary"
-                className="d-flex align-items-center justify-content-center"
+                variant="link"
+                className="btn p-0 border-0 text-secondary"
                 id="wd-quiz-header-menu"
               >
-                <FaEllipsisV />
+                <FaEllipsisV className="fs-4" />
               </Dropdown.Toggle>
               <Dropdown.Menu>
                 <Dropdown.Item onClick={handleSortByAvailableDate}>
@@ -262,38 +296,20 @@ export default function QuizzesPage() {
         )}
       </div>
 
-      {/* Search box like Canvas */}
-      <div className="mb-3" style={{ maxWidth: 360 }}>
-        <div className="position-relative">
-          <button
-            type="button"
-            className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted border-0 bg-transparent p-0"
-            onClick={() =>
-              document.getElementById("search-input")?.focus()
-            }
-          >
-            <IoMdSearch />
-          </button>
-          <FormControl
-            id="search-input"
-            placeholder="Search for quiz"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="ps-5"
-          />
-        </div>
-      </div>
-
       {isLoading && <p>Loading quizzes...</p>}
 
       {!isLoading && courseQuizzes.length === 0 && (
         <div className="text-muted mt-3">
-          No quizzes yet. Click <strong>+ Quiz</strong> to add the first quiz.
+          No quizzes yet. Click <strong>+ Quiz</strong> to add the first
+          quiz.
         </div>
       )}
 
       {courseQuizzes.length > 0 && (
-        <ListGroup className="wd-lessons rounded-0 mt-2" id="wd-quiz-list">
+        <ListGroup
+          className="wd-lessons rounded-0 mt-2"
+          id="wd-quiz-list"
+        >
           {/* Canvas-style section header with toggle */}
           <ListGroupItem className="p-0 border-gray">
             <div className="p-3 ps-1 bg-secondary d-flex justify-content-between align-items-center">
@@ -314,10 +330,20 @@ export default function QuizzesPage() {
             </div>
           </ListGroupItem>
 
-          {/* List items (hidden when collapsed) */}
+          {/* List items */}
           {showAssignmentQuizzes &&
             filteredQuizzes.map((quiz: any, index: number) => {
-              const numberOfQuestions = quiz.questions?.length ?? 0;
+              const numberOfQuestions =
+                quiz.questions?.length ?? 0;
+
+              const attemptsAllowed =
+                quiz.attemptsAllowed ??
+                quiz.howManyAttempts ??
+                1;
+              const attemptText =
+                quiz.multipleAttempts && attemptsAllowed > 1
+                  ? "Multiple Attempt"
+                  : "Single Attempt";
 
               return (
                 <ListGroupItem
@@ -325,7 +351,7 @@ export default function QuizzesPage() {
                   key={quiz._id}
                 >
                   <div className="d-flex">
-                    {/* Gray rocket icon (removed drag handle) */}
+                    {/* Icon */}
                     <IoIosRocket className="me-3 fs-3 text-success" />
 
                     <div>
@@ -347,6 +373,10 @@ export default function QuizzesPage() {
                         |{" "}
                         <span className="fw-semibold">
                           {numberOfQuestions} Questions
+                        </span>{" "}
+                        |{" "}
+                        <span className="fw-semibold">
+                          {attemptText}
                         </span>
                       </div>
                     </div>
@@ -359,7 +389,9 @@ export default function QuizzesPage() {
                         type="button"
                         className="btn btn-link p-0 border-0"
                         onClick={() => handleTogglePublish(quiz)}
-                        title={quiz.published ? "Unpublish" : "Publish"}
+                        title={
+                          quiz.published ? "Unpublish" : "Publish"
+                        }
                       >
                         {quiz.published ? (
                           <FaCheckCircle className="text-success fs-4" />
@@ -373,8 +405,8 @@ export default function QuizzesPage() {
                     {isFaculty && (
                       <Dropdown align="end">
                         <Dropdown.Toggle
-                          variant="outline-secondary"
-                          className="d-flex align-items-center justify-content-center p-1"
+                          variant="link"
+                          className="d-flex align-items-center justify-content-center p-1 text-secondary border-0"
                           id={`quiz-actions-${quiz._id}`}
                         >
                           <FaEllipsisV className="text-secondary fs-4" />
@@ -390,14 +422,20 @@ export default function QuizzesPage() {
                             Edit details
                           </Dropdown.Item>
                           <Dropdown.Item
-                            onClick={() => handleTogglePublish(quiz)}
+                            onClick={() =>
+                              handleTogglePublish(quiz)
+                            }
                           >
-                            {quiz.published ? "Unpublish" : "Publish"}
+                            {quiz.published
+                              ? "Unpublish"
+                              : "Publish"}
                           </Dropdown.Item>
                           <Dropdown.Divider />
                           <Dropdown.Item
                             className="text-danger"
-                            onClick={() => handleDeleteQuiz(quiz._id)}
+                            onClick={() =>
+                              handleDeleteQuiz(quiz._id)
+                            }
                           >
                             <FaTrash className="me-2" />
                             Delete
