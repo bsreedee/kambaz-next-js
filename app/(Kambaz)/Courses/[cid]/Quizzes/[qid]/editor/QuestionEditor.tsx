@@ -129,9 +129,22 @@ export default function QuestionEditor({
   };
 
   const handleSubmit = () => {
-    console.log("Saving question with data:", formData); // Debug
-    onSave(formData);
-  };
+  const payload: any = { ...formData };
+
+  // For multiple choice, store the correct choice text in `correctAnswer`
+  if (payload.type === "multiple-choice") {
+    const correctChoice = payload.choices.find((c: any) => c.correct);
+    payload.correctAnswer = correctChoice ? (correctChoice.text || "") : null;
+  }
+
+  // For fill-in-blank, use first blank as `correctAnswer` for simple grading
+  if (payload.type === "fill-in-blank" && Array.isArray(payload.blanks)) {
+    payload.correctAnswer = payload.blanks[0] || "";
+  }
+
+  onSave(payload);
+};
+
 
   return (
     <div className="border rounded p-4 bg-white mb-3" style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>

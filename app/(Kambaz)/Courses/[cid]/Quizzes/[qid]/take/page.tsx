@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Container, Form, Alert } from "react-bootstrap";
+import { Button, Container, Form, Alert, Modal, Card } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import { RootState } from "../../../../../store";
 import * as quizClient from "../../client";
@@ -21,11 +21,65 @@ export default function QuizTakingPage() {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Access code state
+  const [showAccessCodeModal, setShowAccessCodeModal] = useState(false);
+  const [accessCodeInput, setAccessCodeInput] = useState("");
+  const [accessCodeError, setAccessCodeError] = useState("");
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load quiz and attempt
+  // Detect question type - IMPROVED: More specific and mutually exclusive
+  const isFillInBlank = (q: any) => {
+    // Check for blanks array FIRST (most reliable)
+    if (Array.isArray(q.blanks) && q.blanks.length > 0) return true;
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    return t === "fill-in-blank" || t === "fill in the blank" || t === "fill in blank";
+  };
+
+  const isTrueFalse = (q: any) => {
+    // Check if correctAnswer is boolean FIRST
+    if (typeof q.correctAnswer === "boolean") return true;
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    return t === "true-false" || t === "true/false" || t === "truefalse";
+  };
+
+  const isMultipleChoice = (q: any) => {
+    // Default to multiple choice if has choices/options
+    if (Array.isArray(q.choices) && q.choices.length > 0) return true;
+    if (Array.isArray(q.options) && q.options.length > 0) return true;
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    return t === "multiple-choice" || t === "multiple choice" || t.includes("multiple");
+  };
+
+  // Check if quiz is available
+  const checkAvailability = (quizData: any) => {
+    const now = new Date();
+    
+    // Check if published
+    if (!quizData.published) {
+      setError("This quiz is not published yet");
+      return false;
+    }
+    
+    // Check available date
+    if (quizData.availableDate && new Date(quizData.availableDate) > now) {
+      setError(`This quiz is not available until ${new Date(quizData.availableDate).toLocaleString()}`);
+      return false;
+    }
+    
+    // Check until date (closed)
+    if (quizData.untilDate && new Date(quizData.untilDate) < now) {
+      setError("This quiz is no longer available (Closed)");
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Load quiz and check access
   useEffect(() => {
     const loadQuizAndAttempt = async () => {
       try {
@@ -35,40 +89,26 @@ export default function QuizTakingPage() {
         const quizData = await quizClient.findQuizById(qid);
         setQuiz(quizData);
 
-        // Check for in-progress attempt or create new one
-        let attemptData = await attemptClient.getInProgressAttempt(qid);
-        
-        if (!attemptData) {
-          // Start new attempt
-          attemptData = await attemptClient.startQuizAttempt(qid);
+        // Check availability FIRST
+        if (!checkAvailability(quizData)) {
+          setLoading(false);
+          return;
         }
 
-        setAttempt(attemptData);
-
-        // Load existing answers
-        if (attemptData.answers && attemptData.answers.length > 0) {
-          const answersMap: Record<string, any> = {};
-          attemptData.answers.forEach((ans: any) => {
-            answersMap[ans.questionId] = ans.answer;
-          });
-          setAnswers(answersMap);
+        // Check if access code is required
+        if (quizData.accessCode && quizData.accessCode.trim() !== "") {
+          setShowAccessCodeModal(true);
+          setLoading(false);
+          return;
         }
 
-        // Calculate time remaining
-        if (quizData.timeLimit && quizData.timeLimit > 0) {
-          const startTime = new Date(attemptData.startedAt).getTime();
-          const now = new Date().getTime();
-          const elapsed = Math.floor((now - startTime) / 1000);
-          const limit = quizData.timeLimit * 60; // convert to seconds
-          const remaining = Math.max(0, limit - elapsed);
-          setTimeRemaining(remaining);
-        }
-
+        // If no access code, proceed to load attempt
+        await initializeAttempt(quizData);
         setLoading(false);
       } catch (error) {
         console.error("Error loading quiz:", error);
-        alert("Error loading quiz. Please try again.");
-        router.push(`/Courses/${cid}/Quizzes/${qid}`);
+        setError("Error loading quiz. Please try again.");
+        setLoading(false);
       }
     };
 
@@ -82,6 +122,58 @@ export default function QuizTakingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qid]);
 
+  // Initialize or resume attempt
+  const initializeAttempt = async (quizData: any) => {
+    try {
+      // Check for in-progress attempt
+      let attemptData = await attemptClient.getInProgressAttempt(qid);
+      
+      if (!attemptData) {
+        // Start new attempt
+        attemptData = await attemptClient.startQuizAttempt(qid);
+      }
+
+      setAttempt(attemptData);
+
+      // Load existing answers
+      if (attemptData.answers && attemptData.answers.length > 0) {
+        const answersMap: Record<string, any> = {};
+        attemptData.answers.forEach((ans: any) => {
+          answersMap[ans.questionId] = ans.answer;
+        });
+        setAnswers(answersMap);
+      }
+
+      // Calculate time remaining
+      if (quizData.timeLimit && quizData.timeLimit > 0) {
+        const startTime = new Date(attemptData.startedAt).getTime();
+        const now = new Date().getTime();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const limit = quizData.timeLimit * 60;
+        const remaining = Math.max(0, limit - elapsed);
+        setTimeRemaining(remaining);
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Error starting quiz");
+    }
+  };
+
+  // Verify access code
+  const handleAccessCodeSubmit = async () => {
+    if (!quiz) return;
+    
+    if (accessCodeInput.trim() === quiz.accessCode.trim()) {
+      setShowAccessCodeModal(false);
+      setAccessCodeError("");
+      
+      // Now initialize the attempt
+      await initializeAttempt(quiz);
+      setLoading(false);
+    } else {
+      setAccessCodeError("Incorrect access code. Please try again.");
+    }
+  };
+
   // Timer countdown
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;
@@ -89,8 +181,7 @@ export default function QuizTakingPage() {
     timerRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev === null || prev <= 1) {
-          // Time's up! Auto-submit
-          handleSubmit();
+          handleAutoSubmit();
           return 0;
         }
         return prev - 1;
@@ -137,15 +228,6 @@ export default function QuizTakingPage() {
     }, 1000);
   };
 
-  // Check if all questions are answered
-  const allQuestionsAnswered = () => {
-    if (!quiz || !quiz.questions) return false;
-    return quiz.questions.every((_: any, idx: number) => {
-      const answer = answers[idx.toString()];
-      return answer !== undefined && answer !== "" && answer !== null;
-    });
-  };
-
   const handleAnswerChange = (value: any) => {
     const questionId = currentQuestionIndex.toString();
     const currentQuestion = quiz.questions[currentQuestionIndex];
@@ -172,13 +254,43 @@ export default function QuizTakingPage() {
     }
   };
 
-  const handleSubmit = async () => {
-    // Check if all questions are answered
-    if (!allQuestionsAnswered()) {
-      alert("Please answer all questions before submitting the quiz.");
-      return;
-    }
+  // Auto-submit when time expires
+  const handleAutoSubmit = async () => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
 
+    try {
+      // Save all current answers first
+      const savePromises = Object.entries(answers).map(([questionId, answer]) => {
+        const questionIndex = parseInt(questionId);
+        const question = quiz.questions[questionIndex];
+        const questionType = question?.questionType || question?.type || "multiple-choice";
+        
+        return attemptClient.saveQuestionAnswer(
+          attempt._id,
+          questionId,
+          questionType,
+          answer
+        );
+      });
+
+      await Promise.all(savePromises);
+
+      // Submit quiz for grading
+      await attemptClient.submitQuiz(attempt._id);
+
+      // Redirect to results page
+      router.push(`/Courses/${cid}/Quizzes/${qid}/attempt/${attempt._id}`);
+    } catch (error) {
+      console.error("Error auto-submitting quiz:", error);
+      setError("Time expired. Quiz has been submitted automatically.");
+      setIsSubmitting(false);
+    }
+  };
+
+  // Manual submit - NO "all questions required" check
+  const handleSubmit = async () => {
     const confirmSubmit = window.confirm(
       "Are you sure you want to submit this quiz? You cannot change your answers after submission."
     );
@@ -192,7 +304,7 @@ export default function QuizTakingPage() {
       const savePromises = Object.entries(answers).map(([questionId, answer]) => {
         const questionIndex = parseInt(questionId);
         const question = quiz.questions[questionIndex];
-        const questionType = question?.questionType || question?.type || "Multiple Choice";
+        const questionType = question?.questionType || question?.type || "multiple-choice";
         
         return attemptClient.saveQuestionAnswer(
           attempt._id,
@@ -216,31 +328,64 @@ export default function QuizTakingPage() {
     }
   };
 
-  // Detect question type
-  const isMultipleChoice = (q: any) => {
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
+  // Access Code Modal
+  if (showAccessCodeModal) {
     return (
-      t.includes("multiple") ||
-      t.includes("choice") ||
-      (Array.isArray(q.choices) && q.choices.length > 0) ||
-      (Array.isArray(q.options) && q.options.length > 0)
+      <Container className="mt-5">
+        <Modal show={showAccessCodeModal} centered backdrop="static" keyboard={false}>
+          <Modal.Header>
+            <Modal.Title>Access Code Required</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>This quiz requires an access code to begin.</p>
+            <Form.Group>
+              <Form.Label>Enter Access Code</Form.Label>
+              <Form.Control
+                type="password"
+                value={accessCodeInput}
+                onChange={(e) => setAccessCodeInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") handleAccessCodeSubmit();
+                }}
+                placeholder="Enter passcode"
+                autoFocus
+              />
+              {accessCodeError && (
+                <div className="text-danger mt-2 small">{accessCodeError}</div>
+              )}
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}`)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleAccessCodeSubmit}>
+              Submit
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </Container>
     );
-  };
-
-  const isTrueFalse = (q: any) => {
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return t.includes("true") || t.includes("false");
-  };
-
-  const isFillInBlank = (q: any) => {
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return t.includes("blank") || t.includes("fill");
-  };
+  }
 
   if (loading) {
     return (
       <Container className="mt-3">
         <p>Loading quiz...</p>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container className="mt-3">
+        <Alert variant="danger">
+          <Alert.Heading>Quiz Not Available</Alert.Heading>
+          <p>{error}</p>
+        </Alert>
+        <Button variant="secondary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}`)}>
+          Back to Quiz Details
+        </Button>
       </Container>
     );
   }
@@ -263,26 +408,63 @@ export default function QuizTakingPage() {
 
   return (
     <Container className="mt-4" style={{ maxWidth: "900px" }}>
+      {/* PROMINENT TIMER WARNING */}
+      {timeRemaining !== null && timeRemaining <= 600 && (
+        <Card 
+          className={`mb-3 ${timeRemaining < 120 ? 'border-danger' : 'border-warning'}`}
+          style={{ borderWidth: '3px' }}
+        >
+          <Card.Body className="p-3">
+            <div className="d-flex align-items-center justify-content-between">
+              <div>
+                <h5 className={`mb-0 ${timeRemaining < 120 ? 'text-danger' : 'text-warning'}`}>
+                  ⏰ TIME REMAINING
+                </h5>
+                {timeRemaining < 120 && (
+                  <strong className="text-danger">
+                    ⚠️ WARNING: Less than 2 minutes remaining!
+                  </strong>
+                )}
+              </div>
+              <div 
+                className={`fs-1 fw-bold ${timeRemaining < 120 ? 'text-danger' : 'text-warning'}`}
+                style={{ fontFamily: 'monospace' }}
+              >
+                {formatTime(timeRemaining)}
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
+      )}
+
       <div className="row">
         {/* Main Quiz Area */}
         <div className="col-md-8">
           {/* Quiz Title */}
           <h3 className="mb-3">{quiz.title}</h3>
 
-          {/* Warning for low time */}
-          {timeRemaining !== null && timeRemaining < 300 && timeRemaining > 0 && (
-            <Alert variant="warning">
-              <strong>⚠️ Warning:</strong> Less than 5 minutes remaining!
+          {/* Attempt Info */}
+          <div className="mb-3">
+            <small className="text-muted">
+              Attempt {attempt.attemptNumber} • Started: {new Date(attempt.startedAt).toLocaleString()}
+            </small>
+          </div>
+
+          {/* Quiz Instructions - Show on first question */}
+          {currentQuestionIndex === 0 && quiz.description && (
+            <Alert variant="info" className="mb-4">
+              <strong>Quiz Instructions:</strong>
+              <div dangerouslySetInnerHTML={{ __html: quiz.description }} />
             </Alert>
           )}
 
           {/* Question Display */}
-          <div className="border rounded p-4 bg-white mb-4">
+          <div className="border rounded p-4 bg-white mb-4 shadow-sm">
             <div className="d-flex justify-content-between align-items-start mb-3">
-              <h6>
+              <h5>
                 Question {currentQuestionIndex + 1} of {quiz.questions.length}
-              </h6>
-              <span className="badge bg-secondary">
+              </h5>
+              <span className="badge bg-secondary fs-6">
                 {currentQuestion.points || 0} pts
               </span>
             </div>
@@ -295,75 +477,99 @@ export default function QuizTakingPage() {
               }}
             />
 
-            {/* MULTIPLE CHOICE */}
-            {isMultipleChoice(currentQuestion) && (
-              <div>
-                {(() => {
-                  let choicesList: any[] = [];
-                  
-                  if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
-                    choicesList = currentQuestion.choices;
-                  } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
-                    choicesList = currentQuestion.options.map((opt: string) => ({
-                      text: opt,
-                    }));
-                  }
+            {/* RENDER ONLY ONE QUESTION TYPE - Use if-else chain for mutual exclusivity */}
+            {(() => {
+              // FILL IN THE BLANK - Check this FIRST (most specific)
+              if (isFillInBlank(currentQuestion)) {
+                return (
+                  <div>
+                    <Form.Label className="fw-semibold">Your Answer:</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={answers[questionId] ?? ""}
+                      onChange={(e) => handleAnswerChange(e.target.value)}
+                      placeholder="Type your answer here"
+                      style={{ maxWidth: "400px" }}
+                      className="fs-5"
+                    />
+                  </div>
+                );
+              }
+              
+              // TRUE/FALSE - Check this SECOND
+              if (isTrueFalse(currentQuestion)) {
+                return (
+                  <div>
+                    <div className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
+                      <Form.Check
+                        type="radio"
+                        id={`tf-${questionId}-true`}
+                        name={`question-${questionId}`}
+                        label="True"
+                        className="fs-5"
+                        checked={answers[questionId] === true}
+                        onChange={() => handleAnswerChange(true)}
+                      />
+                    </div>
+                    <div className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
+                      <Form.Check
+                        type="radio"
+                        id={`tf-${questionId}-false`}
+                        name={`question-${questionId}`}
+                        label="False"
+                        className="fs-5"
+                        checked={answers[questionId] === false}
+                        onChange={() => handleAnswerChange(false)}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+              
+              // MULTIPLE CHOICE - Check this LAST (default)
+              if (isMultipleChoice(currentQuestion)) {
+                let choicesList: any[] = [];
+                
+                if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
+                  choicesList = currentQuestion.choices;
+                } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+                  choicesList = currentQuestion.options.map((opt: string) => ({
+                    text: opt,
+                  }));
+                }
 
-                  return choicesList.map((choice: any, idx: number) => {
-                    const choiceText = choice.text || choice;
-                    const selected = answers[questionId] === choiceText;
+                return (
+                  <div>
+                    {choicesList.map((choice: any, idx: number) => {
+                      // Safely extract text from choice
+                      const choiceText = typeof choice === 'string' ? choice : (choice?.text || `Option ${idx + 1}`);
+                      const selected = answers[questionId] === choiceText;
 
-                    return (
-                      <div key={idx} className="mb-2">
-                        <Form.Check
-                          type="radio"
-                          id={`choice-${questionId}-${idx}`}
-                          name={`question-${questionId}`}
-                          label={choiceText || `Option ${idx + 1}`}
-                          checked={selected}
-                          onChange={() => handleAnswerChange(choiceText)}
-                        />
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-
-            {/* TRUE / FALSE */}
-            {isTrueFalse(currentQuestion) && (
-              <div>
-                <Form.Check
-                  type="radio"
-                  id={`tf-${questionId}-true`}
-                  name={`question-${questionId}`}
-                  label="True"
-                  className="mb-2"
-                  checked={answers[questionId] === true}
-                  onChange={() => handleAnswerChange(true)}
-                />
-                <Form.Check
-                  type="radio"
-                  id={`tf-${questionId}-false`}
-                  name={`question-${questionId}`}
-                  label="False"
-                  className="mb-2"
-                  checked={answers[questionId] === false}
-                  onChange={() => handleAnswerChange(false)}
-                />
-              </div>
-            )}
-
-            {/* FILL IN THE BLANK */}
-            {isFillInBlank(currentQuestion) && (
-              <Form.Control
-                type="text"
-                value={answers[questionId] ?? ""}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                placeholder="Type your answer here"
-                style={{ maxWidth: "400px" }}
-              />
-            )}
+                      return (
+                        <div key={idx} className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
+                          <Form.Check
+                            type="radio"
+                            id={`choice-${questionId}-${idx}`}
+                            name={`question-${questionId}`}
+                            label={choiceText}
+                            checked={selected}
+                            onChange={() => handleAnswerChange(choiceText)}
+                            className="fs-5"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+              
+              // Fallback if no type detected
+              return (
+                <div className="alert alert-warning">
+                  Unknown question type: {currentQuestion.type || currentQuestion.questionType || "not specified"}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Navigation Buttons */}
@@ -372,55 +578,64 @@ export default function QuizTakingPage() {
               variant="secondary"
               onClick={handlePrevious}
               disabled={currentQuestionIndex === 0}
+              size="lg"
             >
               ← Previous
             </Button>
             {currentQuestionIndex < quiz.questions.length - 1 ? (
-              <Button variant="primary" onClick={handleNext}>
+              <Button variant="primary" onClick={handleNext} size="lg">
                 Next →
               </Button>
             ) : (
               <Button
                 variant="danger"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !allQuestionsAnswered()}
-                title={!allQuestionsAnswered() ? "Please answer all questions before submitting" : ""}
+                disabled={isSubmitting}
+                size="lg"
               >
                 {isSubmitting ? "Submitting..." : "Submit Quiz"}
               </Button>
             )}
           </div>
+
+          {/* Auto-save indicator */}
+          <div className="text-center text-muted mb-3">
+            <small>✓ Your answers are being saved automatically</small>
+          </div>
         </div>
 
-        {/* Sidebar - Question Navigation */}
+        {/* Sidebar - Question Navigation & Timer */}
         <div className="col-md-4">
           <div
-            className="border rounded p-3 bg-white position-sticky"
+            className="border rounded p-3 bg-white position-sticky shadow-sm"
             style={{ top: "20px" }}
           >
-            <h6 className="mb-3">Questions</h6>
-            
-            {/* Timer - White background */}
+            {/* Timer Display in Sidebar */}
             {timeRemaining !== null && (
-              <div
-                className={`p-3 mb-3 border rounded text-center ${
-                  timeRemaining < 300 ? "border-danger bg-white" : "bg-white"
-                }`}
-              >
-                <div className="fw-bold mb-1">Time Remaining:</div>
-                <div
-                  className={`fs-4 fw-bold ${
-                    timeRemaining < 300 ? "text-danger" : "text-dark"
-                  }`}
-                >
-                  {formatTime(timeRemaining)}
-                </div>
-              </div>
+              <Card className={`mb-3 ${timeRemaining < 300 ? 'border-danger' : 'border-primary'}`}>
+                <Card.Body className="text-center p-3">
+                  <h6 className="mb-2">Time Remaining</h6>
+                  <div 
+                    className={`fs-2 fw-bold ${timeRemaining < 300 ? 'text-danger' : 'text-primary'}`}
+                    style={{ fontFamily: 'monospace' }}
+                  >
+                    {formatTime(timeRemaining)}
+                  </div>
+                  {timeRemaining < 120 && (
+                    <small className="text-danger fw-bold">
+                      Time is running out!
+                    </small>
+                  )}
+                </Card.Body>
+              </Card>
             )}
             
+            <h6 className="mb-3">Questions</h6>
             <div className="d-grid gap-2">
               {quiz.questions.map((q: any, idx: number) => {
-                const isAnswered = answers[idx.toString()] !== undefined && answers[idx.toString()] !== "" && answers[idx.toString()] !== null;
+                const isAnswered = answers[idx.toString()] !== undefined && 
+                                  answers[idx.toString()] !== "" && 
+                                  answers[idx.toString()] !== null;
                 const isCurrent = idx === currentQuestionIndex;
 
                 return (
@@ -436,18 +651,22 @@ export default function QuizTakingPage() {
                 );
               })}
             </div>
+            
             <hr />
-            <div className="text-muted small">
-              Answered: {Object.keys(answers).filter(key => {
-                const val = answers[key];
-                return val !== undefined && val !== "" && val !== null;
-              }).length} / {quiz.questions.length}
+            
+            <div className="text-center">
+              <strong className={
+                Object.keys(answers).filter(key => {
+                  const val = answers[key];
+                  return val !== undefined && val !== "" && val !== null;
+                }).length === quiz.questions.length ? "text-success" : "text-muted"
+              }>
+                Answered: {Object.keys(answers).filter(key => {
+                  const val = answers[key];
+                  return val !== undefined && val !== "" && val !== null;
+                }).length} / {quiz.questions.length}
+              </strong>
             </div>
-            {!allQuestionsAnswered() && (
-              <div className="alert alert-warning mt-2 small py-2">
-                Answer all questions to submit
-              </div>
-            )}
           </div>
         </div>
       </div>

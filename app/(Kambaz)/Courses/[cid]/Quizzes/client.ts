@@ -41,3 +41,49 @@ export const deleteQuiz = async (quizId: string) => {
   );
   return data;
 };
+
+export const startQuizAttempt = async (quizId: string) => {
+  const { data } = await axiosWithCredentials.post(
+    `${quizzesApi}/${quizId}/attempts`
+  );
+  return data;
+};
+
+export const getQuizAttemptsForCurrentUser = async (quizId: string) => {
+  const { data } = await axiosWithCredentials.get(
+    `${quizzesApi}/${quizId}/attempts`
+  );
+  return data;
+};
+
+export const getInProgressAttempt = async (quizId: string) => {
+  const { data } = await axiosWithCredentials.get(
+    `${quizzesApi}/${quizId}/attempts/current`
+  );
+  return data;
+};
+
+export const getAttemptById = async (attemptId: string) => {
+  const { data } = await axiosWithCredentials.get(
+    `${httpServer}/api/attempts/${attemptId}`
+  );
+  return data;
+};
+
+export const saveAttemptAnswer = async (
+  attemptId: string,
+  payload: { questionId: string; questionType: string; answer: any }
+) => {
+  const { data } = await axiosWithCredentials.post(
+    `${httpServer}/api/attempts/${attemptId}/answers`,
+    payload
+  );
+  return data;
+};
+
+export const submitAttempt = async (attemptId: string) => {
+  const { data } = await axiosWithCredentials.post(
+    `${httpServer}/api/attempts/${attemptId}/submit`
+  );
+  return data;
+};

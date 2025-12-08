@@ -17,10 +17,7 @@ import {
   ListGroupItem,
 } from "react-bootstrap";
 
-import {
-  BsChevronDown,
-  BsChevronRight,
-} from "react-icons/bs";
+import { BsChevronDown, BsChevronRight } from "react-icons/bs";
 import {
   FaPlus,
   FaTrash,
@@ -30,6 +27,7 @@ import {
 } from "react-icons/fa";
 import { IoIosRocket } from "react-icons/io";
 import * as client from "./client";
+import * as attemptClient from "./attemptClient";
 import { setQuizzes, addQuiz, deleteQuiz, updateQuiz } from "./reducer";
 import "./quizstyles.css";
 
@@ -46,9 +44,7 @@ const formatDate = (value?: string | Date | null) => {
 
 const getAvailabilityText = (quiz: any) => {
   const now = new Date();
-  const availableDate = quiz.availableDate
-    ? new Date(quiz.availableDate)
-    : null;
+  const availableDate = quiz.availableDate ? new Date(quiz.availableDate) : null;
   const untilDate = quiz.untilDate ? new Date(quiz.untilDate) : null;
 
   if (availableDate && now < availableDate) {
@@ -71,27 +67,31 @@ export default function QuizzesPage() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const { quizzes } = useSelector(
-    (state: RootState) => state.quizzesReducer
-  );
+  const { quizzes } = useSelector((state: RootState) => state.quizzesReducer);
   const { currentUser } = useSelector(
     (state: RootState) => state.accountReducer
   );
   const isFaculty = (currentUser as any)?.role === "FACULTY";
+  const isStudent = !isFaculty;
 
   const [isLoading, setIsLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [showAssignmentQuizzes, setShowAssignmentQuizzes] =
-    useState(true);
+  const [showAssignmentQuizzes, setShowAssignmentQuizzes] = useState(true);
   const [sortBy, setSortBy] = useState<"availableDate" | "title">(
     "availableDate"
   );
+  const [attemptSummaries, setAttemptSummaries] = useState<
+    Record<string, any>
+  >({});
 
   // all quizzes for this course, sorted by selected criteria
   const courseQuizzes = useMemo(
     () =>
       (quizzes || [])
-        .filter((quiz: any) => quiz.course === cid)
+        .filter(
+          (quiz: any) =>
+            quiz.course === cid && (isFaculty || quiz.published)
+        )
         .slice()
         .sort((a: any, b: any) => {
           if (sortBy === "title") {
@@ -109,7 +109,7 @@ export default function QuizzesPage() {
             return aDate - bDate;
           }
         }),
-    [quizzes, cid, sortBy]
+    [quizzes, cid, sortBy, isFaculty]
   );
 
   const filteredQuizzes = useMemo(() => {
@@ -135,6 +135,54 @@ export default function QuizzesPage() {
     fetchQuizzes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cid]);
+
+  // Load latest attempt per quiz for students
+  useEffect(() => {
+    if (!isStudent) {
+      setAttemptSummaries({});
+      return;
+    }
+    if (!courseQuizzes.length) {
+      setAttemptSummaries({});
+      return;
+    }
+
+    const loadAttemptsForAll = async () => {
+      try {
+        const entries = await Promise.all(
+          courseQuizzes.map(async (quiz: any) => {
+            try {
+              const attempts = await attemptClient.getMyQuizAttempts(
+                quiz._id
+              );
+              const latest =
+                attempts && attempts.length > 0 ? attempts[0] : null;
+              return [quiz._id, latest] as const;
+            } catch (error) {
+              console.error(
+                "Error loading attempts for quiz",
+                quiz._id,
+                error
+              );
+              return [quiz._id, null] as const;
+            }
+          })
+        );
+
+        const map: Record<string, any> = {};
+        entries.forEach(([quizId, attempt]) => {
+          if (attempt) {
+            map[quizId] = attempt;
+          }
+        });
+        setAttemptSummaries(map);
+      } catch (error) {
+        console.error("Error loading quiz attempts:", error);
+      }
+    };
+
+    loadAttemptsForAll();
+  }, [isStudent, courseQuizzes]);
 
   const handleAddQuiz = async () => {
     if (!cid) return;
@@ -200,9 +248,7 @@ export default function QuizzesPage() {
     const updatedMap = new Map(
       updatedCourseQuizzes.map((q: any) => [q._id, q])
     );
-    const next = quizzes.map(
-      (q: any) => updatedMap.get(q._id) ?? q
-    );
+    const next = quizzes.map((q: any) => updatedMap.get(q._id) ?? q);
     dispatch(setQuizzes(next));
   };
 
@@ -216,9 +262,7 @@ export default function QuizzesPage() {
     const updatedMap = new Map(
       updatedCourseQuizzes.map((q: any) => [q._id, q])
     );
-    const next = quizzes.map(
-      (q: any) => updatedMap.get(q._id) ?? q
-    );
+    const next = quizzes.map((q: any) => updatedMap.get(q._id) ?? q);
     dispatch(setQuizzes(next));
   };
 
@@ -333,17 +377,21 @@ export default function QuizzesPage() {
           {/* List items */}
           {showAssignmentQuizzes &&
             filteredQuizzes.map((quiz: any, index: number) => {
-              const numberOfQuestions =
-                quiz.questions?.length ?? 0;
+              const numberOfQuestions = quiz.questions?.length ?? 0;
 
               const attemptsAllowed =
-                quiz.attemptsAllowed ??
-                quiz.howManyAttempts ??
-                1;
+                quiz.attemptsAllowed ?? quiz.howManyAttempts ?? 1;
               const attemptText =
                 quiz.multipleAttempts && attemptsAllowed > 1
                   ? "Multiple Attempt"
                   : "Single Attempt";
+
+              const latestAttempt = isStudent
+                ? attemptSummaries[quiz._id]
+                : null;
+
+              const totalPoints =
+                latestAttempt?.totalPoints ?? quiz.points ?? 0;
 
               return (
                 <ListGroupItem
@@ -375,9 +423,16 @@ export default function QuizzesPage() {
                           {numberOfQuestions} Questions
                         </span>{" "}
                         |{" "}
-                        <span className="fw-semibold">
-                          {attemptText}
-                        </span>
+                        <span className="fw-semibold">{attemptText}</span>
+                        {isStudent && latestAttempt && (
+                          <>
+                            {" "}
+                            |{" "}
+                            <span className="fw-semibold">
+                              Score: {latestAttempt.score} / {totalPoints}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -389,9 +444,7 @@ export default function QuizzesPage() {
                         type="button"
                         className="btn btn-link p-0 border-0"
                         onClick={() => handleTogglePublish(quiz)}
-                        title={
-                          quiz.published ? "Unpublish" : "Publish"
-                        }
+                        title={quiz.published ? "Unpublish" : "Publish"}
                       >
                         {quiz.published ? (
                           <FaCheckCircle className="text-success fs-4" />
@@ -422,20 +475,14 @@ export default function QuizzesPage() {
                             Edit details
                           </Dropdown.Item>
                           <Dropdown.Item
-                            onClick={() =>
-                              handleTogglePublish(quiz)
-                            }
+                            onClick={() => handleTogglePublish(quiz)}
                           >
-                            {quiz.published
-                              ? "Unpublish"
-                              : "Publish"}
+                            {quiz.published ? "Unpublish" : "Publish"}
                           </Dropdown.Item>
                           <Dropdown.Divider />
                           <Dropdown.Item
                             className="text-danger"
-                            onClick={() =>
-                              handleDeleteQuiz(quiz._id)
-                            }
+                            onClick={() => handleDeleteQuiz(quiz._id)}
                           >
                             <FaTrash className="me-2" />
                             Delete

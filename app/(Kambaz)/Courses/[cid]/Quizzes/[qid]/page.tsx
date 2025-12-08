@@ -33,11 +33,11 @@ export default function QuizDetailsPage() {
   const { cid, qid } = useParams() as { cid: string; qid: string };
   const router = useRouter();
   const dispatch = useDispatch();
-  
+
   const [quiz, setQuiz] = useState<any | null>(null);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const { currentUser } = useSelector(
     (state: RootState) => state.accountReducer
   );
@@ -85,57 +85,62 @@ export default function QuizDetailsPage() {
   const isQuizAvailable = () => {
     if (!quiz) return false;
     if (!quiz.published && isStudent) return false;
-    
+
     const now = new Date();
-    
+
     if (quiz.availableDate) {
       const availableDate = new Date(quiz.availableDate);
       if (now < availableDate) return false;
     }
-    
+
     if (quiz.untilDate) {
       const untilDate = new Date(quiz.untilDate);
       if (now > untilDate) return false;
     }
-    
+
     return true;
   };
 
   const getAvailabilityMessage = () => {
     if (!quiz) return "";
     const now = new Date();
-    
+
     if (quiz.availableDate && now < new Date(quiz.availableDate)) {
       return `This quiz is locked until ${formatDateTime(quiz.availableDate)}.`;
     }
-    
+
     if (quiz.untilDate && now > new Date(quiz.untilDate)) {
       return `This quiz was locked ${formatDateTime(quiz.untilDate)}.`;
     }
-    
+
     return "";
   };
 
   const canTakeQuiz = () => {
     if (!isQuizAvailable()) {
-      return { can: false, reason: getAvailabilityMessage() };
+      return { can: false, reason: getAvailabilityMessage() as string };
     }
-    
+
     // Check if there's an in-progress attempt
     const inProgress = attempts.find((a) => a.status === "IN_PROGRESS");
     if (inProgress) {
-      return { can: true, reason: "Resume Quiz", attemptId: inProgress._id, isResume: true };
+      return {
+        can: true,
+        reason: "Resume Quiz",
+        attemptId: inProgress._id,
+        isResume: true,
+      };
     }
-    
+
     // Check attempt limit
     const submittedAttempts = attempts.filter(
       (a) => a.status === "GRADED" || a.status === "SUBMITTED"
     ).length;
-    
+
     if (!quiz.multipleAttempts && submittedAttempts >= 1) {
       return { can: false, reason: "You have already completed this quiz" };
     }
-    
+
     if (
       quiz.multipleAttempts &&
       quiz.attemptsAllowed &&
@@ -146,11 +151,18 @@ export default function QuizDetailsPage() {
         reason: `You have used all ${quiz.attemptsAllowed} attempts`,
       };
     }
-    
-    return { can: true, reason: "Take the Quiz", isResume: false };
+
+    return { can: true, reason: "Take the Quiz", isResume: false as const };
   };
 
+  // FIXED: Navigate to /take page instead of /attempt/[id]
   const handleTakeQuiz = () => {
+    if (!quiz) return;
+
+    const status = canTakeQuiz();
+    if (!status.can) return;
+
+    // Navigate to the TAKE page (not results page)
     router.push(`/Courses/${cid}/Quizzes/${qid}/take`);
   };
 
@@ -217,13 +229,10 @@ export default function QuizDetailsPage() {
         <div className="col-md-8">
           {/* Quiz Meta Info */}
           <div className="mb-3">
-            <strong>Due:</strong> {formatDateTime(quiz.dueDate)} | 
-            <strong className="ms-2">Points:</strong> {quiz.points || 0} | 
-            <strong className="ms-2">Questions:</strong> {quiz.questions?.length || 0}
-          </div>
-
-          <div className="mb-3">
-            <strong>Available:</strong> {formatDateTime(quiz.availableDate)} - {formatDateTime(quiz.untilDate)}
+            <strong>Due:</strong> {formatDateTime(quiz.dueDate)} |
+            <strong className="ms-2">Points:</strong> {quiz.points || 0} |
+            <strong className="ms-2">Questions:</strong>{" "}
+            {quiz.questions?.length || 0}
           </div>
 
           {quiz.timeLimit && quiz.timeLimit > 0 && (
@@ -250,14 +259,10 @@ export default function QuizDetailsPage() {
             </Alert>
           )}
 
-          {/* Take Quiz Button for Students */}
+          {/* Take / Resume Quiz Button for Students */}
           {isStudent && quizStatus.can && (
             <div className="text-center my-4">
-              <Button
-                variant="danger"
-                size="lg"
-                onClick={handleTakeQuiz}
-              >
+              <Button variant="danger" size="lg" onClick={handleTakeQuiz}>
                 {quizStatus.reason}
               </Button>
             </div>
@@ -331,7 +336,9 @@ export default function QuizDetailsPage() {
 
             <div className="row mb-2">
               <div className="col-5 text-end fw-semibold">Shuffle Answers</div>
-              <div className="col-7">{quiz.shuffleAnswers ? "Yes" : "No"}</div>
+              <div className="col-7">
+                {quiz.shuffleAnswers ? "Yes" : "No"}
+              </div>
             </div>
 
             <div className="row mb-2">
@@ -344,7 +351,9 @@ export default function QuizDetailsPage() {
             </div>
 
             <div className="row mb-2">
-              <div className="col-5 text-end fw-semibold">Multiple Attempts</div>
+              <div className="col-5 text-end fw-semibold">
+                Multiple Attempts
+              </div>
               <div className="col-7">
                 {quiz.multipleAttempts
                   ? `Yes (${attemptsAllowed} attempts)`
@@ -358,8 +367,12 @@ export default function QuizDetailsPage() {
             </div>
 
             <div className="row mb-2">
-              <div className="col-5 text-end fw-semibold">Show Correct Answers</div>
-              <div className="col-7">{quiz.showCorrectAnswers || "Immediately"}</div>
+              <div className="col-5 text-end fw-semibold">
+                Show Correct Answers
+              </div>
+              <div className="col-7">
+                {quiz.showCorrectAnswers || "Immediately"}
+              </div>
             </div>
 
             <div className="row mb-2">
