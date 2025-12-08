@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
-import { Form, Button } from "react-bootstrap";
+import { Form, Button, Alert } from "react-bootstrap";
 import { FaTrash, FaCheck } from "react-icons/fa";
 
 interface QuestionEditorProps {
@@ -32,13 +32,15 @@ export default function QuestionEditor({
       type: question.type || "multiple-choice",
       points: question.points || 4,
       question: question.question || "",
-      choices: question.choices || [
-        { text: "", correct: false },
-        { text: "", correct: false },
-        { text: "", correct: false },
-      ],
+      choices: question.choices && question.choices.length > 0
+        ? question.choices
+        : [
+            { text: "", correct: true },
+            { text: "", correct: false },
+            { text: "", correct: false },
+          ],
       correctAnswer: question.correctAnswer !== undefined ? question.correctAnswer : true,
-      blanks: question.blanks || [""],
+      blanks: question.blanks && question.blanks.length > 0 ? question.blanks : [""],
     });
   }, [question]);
 
@@ -57,7 +59,7 @@ export default function QuestionEditor({
     switch (newType) {
       case "multiple-choice":
         resetData.choices = [
-          { text: "", correct: false },
+          { text: "", correct: true },
           { text: "", correct: false },
           { text: "", correct: false },
         ];
@@ -67,6 +69,9 @@ export default function QuestionEditor({
         break;
       case "fill-in-blank":
         resetData.blanks = [""];
+        break;
+      case "fill-in-multiple-blanks":
+        resetData.blanks = ["", "", ""];
         break;
     }
 
@@ -129,28 +134,32 @@ export default function QuestionEditor({
   };
 
   const handleSubmit = () => {
-  const payload: any = { ...formData };
+    const payload: any = { ...formData };
 
-  // For multiple choice, store the correct choice text in `correctAnswer`
-  if (payload.type === "multiple-choice") {
-    const correctChoice = payload.choices.find((c: any) => c.correct);
-    payload.correctAnswer = correctChoice ? (correctChoice.text || "") : null;
-  }
+    // For multiple choice
+    if (payload.type === "multiple-choice") {
+      const correctChoice = payload.choices.find((c: any) => c.correct);
+      payload.correctAnswer = correctChoice ? (correctChoice.text || "") : null;
+    }
 
-  // For fill-in-blank, use first blank as `correctAnswer` for simple grading
-  if (payload.type === "fill-in-blank" && Array.isArray(payload.blanks)) {
-    payload.correctAnswer = payload.blanks[0] || "";
-  }
+    // For single fill-in-blank
+    if (payload.type === "fill-in-blank" && Array.isArray(payload.blanks)) {
+      payload.correctAnswer = payload.blanks[0] || "";
+    }
 
-  onSave(payload);
-};
+    // For multiple blanks - store array of correct answers
+    if (payload.type === "fill-in-multiple-blanks") {
+      payload.correctAnswer = payload.blanks;
+    }
 
+    onSave(payload);
+  };
 
   return (
     <div className="border rounded p-4 bg-white mb-3" style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
       {/* Question Header */}
       <div className="row mb-3">
-        <div className="col-md-5">
+        <div className="col-md-4">
           <Form.Control
             type="text"
             value={formData.title}
@@ -158,7 +167,7 @@ export default function QuestionEditor({
             placeholder="Question Title"
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-md-5">
           <Form.Select
             value={formData.type}
             onChange={(e) => handleTypeChange(e.target.value)}
@@ -189,49 +198,32 @@ export default function QuestionEditor({
         {formData.type === "true-false" &&
           "Enter your question text, then select if True or False is the correct answer."}
         {formData.type === "fill-in-blank" &&
-          "Enter your question text, then define all possible correct answers for the blank. Students will see the question followed by a small text box to type their answer."}
+          "Enter your question. For multiple blanks, use [1], [2], etc. Then define the correct answer for each blank. Students get partial credit for each correct blank."}
       </p>
 
       {/* Question Text */}
       <Form.Group className="mb-4">
         <Form.Label className="fw-semibold">Question:</Form.Label>
         <div className="border rounded" style={{ backgroundColor: "#fafafa" }}>
-          <div className="p-2 border-bottom bg-light" style={{ fontSize: "12px" }}>
-            <span className="me-3">Edit</span>
-            <span className="me-3">View</span>
-            <span className="me-3">Insert</span>
-            <span className="me-3">Format</span>
-            <span className="me-3">Tools</span>
-            <span className="me-3">Table</span>
-          </div>
-          <div className="p-2 border-bottom bg-light d-flex align-items-center gap-2" style={{ fontSize: "12px" }}>
-            <select className="form-select form-select-sm" style={{ width: "auto" }}>
-              <option>12pt</option>
-            </select>
-            <select className="form-select form-select-sm" style={{ width: "auto" }}>
-              <option>Paragraph</option>
-            </select>
-            <button className="btn btn-sm">
-              <strong>B</strong>
-            </button>
-            <button className="btn btn-sm">
-              <em>I</em>
-            </button>
-            <button className="btn btn-sm">
-              <u>U</u>
-            </button>
-            <span>⋮</span>
-          </div>
           <Form.Control
             as="textarea"
             rows={4}
             value={formData.question}
             onChange={(e) => handleChange("question", e.target.value)}
-            placeholder="Enter your question"
+            placeholder={
+              formData.type === "fill-in-multiple-blanks"
+                ? 'Example: "The [1] is the largest planet in our solar system, and [2] is the smallest."'
+                : "Enter your question"
+            }
             style={{ border: "none", resize: "none" }}
             className="p-3"
           />
         </div>
+        {formData.type === "fill-in-multiple-blanks" && (
+          <Form.Text className="text-muted">
+            Use [1], [2], [3], etc. to mark where blanks should appear. Students will see input boxes numbered accordingly.
+          </Form.Text>
+        )}
       </Form.Group>
 
       {/* MULTIPLE CHOICE */}
@@ -332,40 +324,50 @@ export default function QuestionEditor({
       {/* FILL IN THE BLANK */}
       {formData.type === "fill-in-blank" && (
         <div className="mb-4">
-          <Form.Label className="fw-semibold">Answers:</Form.Label>
+          <Form.Label className="fw-semibold">Blanks:</Form.Label>
           <p className="text-muted small">
-            Students will see the question followed by a small text box to type their answer.
+            {formData.blanks.length === 1 
+              ? "Single blank - student must match one of the answers below (case-insensitive)."
+              : `Multiple blanks - use [1], [2], [3], etc. in question text. Each blank worth ${(formData.points / Math.max(1, formData.blanks.length)).toFixed(1)} points.`
+            }
           </p>
+          
           {formData.blanks.map((blank, index) => (
-            <div key={index} className="mb-2 d-flex align-items-center gap-2">
-              <div className="small text-muted" style={{ width: "120px" }}>
-                Possible Answer:
+            <div key={index} className="mb-3 border rounded p-3 bg-light">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <span className="badge bg-primary">Blank {index + 1}</span>
+                <span className="fw-semibold">
+                  Worth: {(formData.points / Math.max(1, formData.blanks.length)).toFixed(1)} pts
+                </span>
+                {formData.blanks.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn btn-link text-danger p-0 ms-auto"
+                    onClick={() => handleRemoveBlank(index)}
+                  >
+                    <FaTrash /> Remove
+                  </button>
+                )}
               </div>
               <Form.Control
                 type="text"
                 value={blank}
                 onChange={(e) => handleBlankChange(index, e.target.value)}
-                placeholder={`Answer ${index + 1}`}
-                style={{ maxWidth: "300px" }}
+                placeholder={`Correct answer for Blank ${index + 1}`}
               />
-              {formData.blanks.length > 1 && (
-                <button
-                  type="button"
-                  className="btn btn-link text-secondary p-0"
-                  onClick={() => handleRemoveBlank(index)}
-                >
-                  <FaTrash />
-                </button>
-              )}
+              <Form.Text className="text-muted">
+                Student must match this exactly (case-insensitive)
+              </Form.Text>
             </div>
           ))}
+          
           <div className="text-center mt-3">
             <Button
               variant="link"
               onClick={handleAddBlank}
               className="text-danger text-decoration-none"
             >
-              + Add Another Answer
+              + Add Another Blank
             </Button>
           </div>
         </div>
@@ -380,6 +382,12 @@ export default function QuestionEditor({
             style={{ border: "1px solid #ccc" }}
           >
             Cancel
+          </Button>
+          <Button 
+            variant="outline-danger" 
+            onClick={onDelete}
+          >
+            Delete Question
           </Button>
         </div>
         <Button 

@@ -7,6 +7,7 @@ interface QuizDetailsEditorProps {
   onSave: (quiz: any) => void;
   onSaveAndPublish: (quiz: any) => void;
   onCancel: () => void;
+  onChange?: (quiz: any) => void; // ADD THIS LINE
 }
 
 const toLocalInput = (value?: string) => {
@@ -21,6 +22,7 @@ export default function QuizDetailsEditor({
   onSave,
   onSaveAndPublish,
   onCancel,
+  onChange, // ADD THIS LINE
 }: QuizDetailsEditorProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -53,19 +55,13 @@ export default function QuizDetailsEditor({
         timeLimit: quiz.timeLimit || 20,
         hasTimeLimit: (quiz.timeLimit && quiz.timeLimit > 0) || false,
         multipleAttempts: quiz.multipleAttempts || false,
-        howManyAttempts:
-          quiz.howManyAttempts ??
-          quiz.attemptsAllowed ??
-          1,
+        howManyAttempts: quiz.howManyAttempts ?? quiz.attemptsAllowed ?? 1,
         showCorrectAnswers: quiz.showCorrectAnswers || "Immediately",
         accessCode: quiz.accessCode || "",
         oneQuestionAtATime:
-          quiz.oneQuestionAtATime !== undefined
-            ? quiz.oneQuestionAtATime
-            : true,
+          quiz.oneQuestionAtATime !== undefined ? quiz.oneQuestionAtATime : true,
         webcamRequired: quiz.webcamRequired || false,
-        lockQuestionsAfterAnswering:
-          quiz.lockQuestionsAfterAnswering || false,
+        lockQuestionsAfterAnswering: quiz.lockQuestionsAfterAnswering || false,
         dueDate: toLocalInput(quiz.dueDate),
         availableDate: toLocalInput(quiz.availableDate),
         untilDate: toLocalInput(quiz.untilDate),
@@ -74,7 +70,18 @@ export default function QuizDetailsEditor({
   }, [quiz]);
 
   const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    const updated = { ...formData, [field]: value };
+    setFormData(updated);
+    
+    // Notify parent component of changes
+    if (onChange) {
+      onChange({ 
+        ...quiz, 
+        ...updated,
+        timeLimit: field === 'hasTimeLimit' && !value ? 0 : updated.timeLimit,
+        attemptsAllowed: updated.howManyAttempts,
+      });
+    }
   };
 
   const buildPayload = () => ({
@@ -129,7 +136,9 @@ export default function QuizDetailsEditor({
             }}
           />
           <div className="text-end mt-2">
-            <small className="text-muted">0 words</small>
+            <small className="text-muted">
+              {formData.description.split(/\s+/).filter(Boolean).length} words
+            </small>
           </div>
         </div>
       </Form.Group>
@@ -172,9 +181,7 @@ export default function QuizDetailsEditor({
           id="shuffleAnswers"
           label="Shuffle Answers"
           checked={formData.shuffleAnswers}
-          onChange={(e) =>
-            handleChange("shuffleAnswers", e.target.checked)
-          }
+          onChange={(e) => handleChange("shuffleAnswers", e.target.checked)}
           className="mb-2"
         />
 
@@ -185,9 +192,7 @@ export default function QuizDetailsEditor({
             id="hasTimeLimit"
             label="Time Limit"
             checked={formData.hasTimeLimit}
-            onChange={(e) =>
-              handleChange("hasTimeLimit", e.target.checked)
-            }
+            onChange={(e) => handleChange("hasTimeLimit", e.target.checked)}
           />
           {formData.hasTimeLimit && (
             <div className="d-flex align-items-center mt-2 ms-4">
@@ -195,10 +200,7 @@ export default function QuizDetailsEditor({
                 type="number"
                 value={formData.timeLimit}
                 onChange={(e) =>
-                  handleChange(
-                    "timeLimit",
-                    parseInt(e.target.value, 10) || 0
-                  )
+                  handleChange("timeLimit", parseInt(e.target.value, 10) || 0)
                 }
                 min={1}
                 style={{ width: "80px" }}
@@ -216,9 +218,7 @@ export default function QuizDetailsEditor({
             id="multipleAttempts"
             label="Allow Multiple Attempts"
             checked={formData.multipleAttempts}
-            onChange={(e) =>
-              handleChange("multipleAttempts", e.target.checked)
-            }
+            onChange={(e) => handleChange("multipleAttempts", e.target.checked)}
           />
           {formData.multipleAttempts && (
             <div className="d-flex align-items-center mt-2 ms-4">
@@ -227,10 +227,7 @@ export default function QuizDetailsEditor({
                 min={1}
                 value={formData.howManyAttempts}
                 onChange={(e) =>
-                  handleChange(
-                    "howManyAttempts",
-                    parseInt(e.target.value, 10) || 1
-                  )
+                  handleChange("howManyAttempts", parseInt(e.target.value, 10) || 1)
                 }
                 style={{ width: "80px" }}
                 className="me-2"
@@ -242,14 +239,10 @@ export default function QuizDetailsEditor({
 
         {/* Show Correct Answers */}
         <Form.Group className="mb-3 mt-3">
-          <Form.Label className="fw-semibold">
-            Show Correct Answers
-          </Form.Label>
+          <Form.Label className="fw-semibold">Show Correct Answers</Form.Label>
           <Form.Select
             value={formData.showCorrectAnswers}
-            onChange={(e) =>
-              handleChange("showCorrectAnswers", e.target.value)
-            }
+            onChange={(e) => handleChange("showCorrectAnswers", e.target.value)}
           >
             <option value="Immediately">Immediately</option>
             <option value="Never">Never</option>
@@ -278,9 +271,7 @@ export default function QuizDetailsEditor({
           label="Show one question at a time"
           className="mb-2"
           checked={formData.oneQuestionAtATime}
-          onChange={(e) =>
-            handleChange("oneQuestionAtATime", e.target.checked)
-          }
+          onChange={(e) => handleChange("oneQuestionAtATime", e.target.checked)}
         />
 
         <Form.Check
@@ -289,9 +280,7 @@ export default function QuizDetailsEditor({
           label="Webcam required"
           className="mb-2"
           checked={formData.webcamRequired}
-          onChange={(e) =>
-            handleChange("webcamRequired", e.target.checked)
-          }
+          onChange={(e) => handleChange("webcamRequired", e.target.checked)}
         />
 
         <Form.Check
@@ -301,10 +290,7 @@ export default function QuizDetailsEditor({
           className="mb-2"
           checked={formData.lockQuestionsAfterAnswering}
           onChange={(e) =>
-            handleChange(
-              "lockQuestionsAfterAnswering",
-              e.target.checked
-            )
+            handleChange("lockQuestionsAfterAnswering", e.target.checked)
           }
         />
       </div>
@@ -341,9 +327,7 @@ export default function QuizDetailsEditor({
             <Form.Control
               type="datetime-local"
               value={formData.availableDate}
-              onChange={(e) =>
-                handleChange("availableDate", e.target.value)
-              }
+              onChange={(e) => handleChange("availableDate", e.target.value)}
             />
           </Col>
           <Col md={6}>
@@ -355,15 +339,9 @@ export default function QuizDetailsEditor({
             />
           </Col>
         </Row>
-
-        <div className="text-center mt-3">
-          <Button variant="link" className="text-decoration-none">
-            + Add
-          </Button>
-        </div>
       </div>
 
-      {/* Action Buttons - Canvas Style */}
+      {/* Action Buttons */}
       <div className="d-flex justify-content-end gap-2 pt-3 border-top">
         <Button
           variant="light"
@@ -373,11 +351,7 @@ export default function QuizDetailsEditor({
         >
           Cancel
         </Button>
-        <Button
-          variant="danger"
-          onClick={handleSubmit}
-          className="px-4"
-        >
+        <Button variant="danger" onClick={handleSubmit} className="px-4">
           Save
         </Button>
         <Button

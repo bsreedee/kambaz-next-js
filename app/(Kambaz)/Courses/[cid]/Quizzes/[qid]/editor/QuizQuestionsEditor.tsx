@@ -8,6 +8,7 @@ interface QuizQuestionsEditorProps {
   onSave: (quiz: any) => void;
   onSaveAndPublish: (quiz: any) => void;
   onCancel: () => void;
+  onChange?: (quiz: any) => void;
 }
 
 export default function QuizQuestionsEditor({
@@ -15,15 +16,15 @@ export default function QuizQuestionsEditor({
   onSave,
   onSaveAndPublish,
   onCancel,
+  onChange,
 }: QuizQuestionsEditorProps) {
   const [questions, setQuestions] = useState<any[]>([]);
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
-    null
-  );
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (quiz?.questions) {
-      setQuestions(quiz.questions);
+      // Deep copy to avoid mutation
+      setQuestions(JSON.parse(JSON.stringify(quiz.questions)));
     }
   }, [quiz]);
 
@@ -44,45 +45,64 @@ export default function QuizQuestionsEditor({
     setEditingQuestionId(newQuestion._id);
   };
 
-  const handleUpdateQuestion = (
-    questionId: string,
-    updatedQuestion: any
-  ) => {
-    setQuestions((prev) =>
-      prev.map((q) =>
-        q._id === questionId ? { ...q, ...updatedQuestion } : q
-      )
+  const handleUpdateQuestion = (questionId: string, updatedQuestion: any) => {
+    const newQuestions = questions.map((q) =>
+      q._id === questionId ? { ...q, ...updatedQuestion } : q
     );
+    setQuestions(newQuestions);
     setEditingQuestionId(null);
+    
+    if (onChange) {
+      onChange({
+        ...quiz,
+        questions: newQuestions,
+        points: newQuestions.reduce((sum, q) => sum + (q.points || 0), 0),
+      });
+    }
   };
 
   const handleDeleteQuestion = (questionId: string) => {
-    setQuestions((prev) => prev.filter((q) => q._id !== questionId));
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this question?"
+    );
+    if (!confirmDelete) return;
+
+    const newQuestions = questions.filter((q) => q._id !== questionId);
+    setQuestions(newQuestions);
     setEditingQuestionId(null);
+    
+    if (onChange) {
+      onChange({
+        ...quiz,
+        questions: newQuestions,
+        points: newQuestions.reduce((sum, q) => sum + (q.points || 0), 0),
+      });
+    }
   };
 
   const handleCancelEdit = () => {
-    // If we were editing a brand-new temp question, drop just that one
-    if (
-      editingQuestionId &&
-      editingQuestionId.toString().startsWith("temp_")
-    ) {
-      setQuestions((prev) =>
-        prev.filter((q) => q._id !== editingQuestionId)
-      );
+  // If it's a temp question (being created), remove it
+  if (editingQuestionId?.startsWith("temp_")) {
+    setQuestions((prev) => prev.filter((q) => q._id !== editingQuestionId));
+  } else {
+    // If it's an existing question, restore original data from quiz
+    if (quiz?.questions) {
+      const originalQuestion = quiz.questions.find((q: any) => q._id === editingQuestionId);
+      if (originalQuestion) {
+        setQuestions((prev) =>
+          prev.map((q) => (q._id === editingQuestionId ? { ...originalQuestion } : q))
+        );
+      }
     }
-    // For existing questions, just stop editing and keep everything as-is
-    setEditingQuestionId(null);
-  };
+  }
+  setEditingQuestionId(null);
+};
 
   const handleSave = () => {
     const updatedQuiz = {
       ...quiz,
       questions,
-      points: questions.reduce(
-        (sum, q) => sum + (q.points || 0),
-        0
-      ),
+      points: questions.reduce((sum, q) => sum + (q.points || 0), 0),
     };
     onSave(updatedQuiz);
   };
@@ -91,32 +111,22 @@ export default function QuizQuestionsEditor({
     const updatedQuiz = {
       ...quiz,
       questions,
-      points: questions.reduce(
-        (sum, q) => sum + (q.points || 0),
-        0
-      ),
+      points: questions.reduce((sum, q) => sum + (q.points || 0), 0),
     };
     onSaveAndPublish(updatedQuiz);
   };
 
   return (
     <div className="quiz-questions-editor">
-      {/* New Question Button - Canvas style centered */}
       <div className="text-center mb-4">
-        <Button
-          variant="outline-secondary"
-          onClick={handleAddQuestion}
-          className="px-4 py-2"
-        >
+        <Button variant="outline-secondary" onClick={handleAddQuestion} className="px-4 py-2">
           + New Question
         </Button>
       </div>
 
-      {/* Questions List */}
       {questions.length === 0 && editingQuestionId === null ? (
         <div className="alert alert-info text-center">
-          No questions yet. Click &quot;+ New Question&quot; to add your
-          first question.
+          No questions yet. Click &quot;+ New Question&quot; to add your first question.
         </div>
       ) : (
         <div className="questions-list mb-4">
@@ -140,23 +150,16 @@ export default function QuizQuestionsEditor({
                           Question {index + 1}: {question.title}
                         </h6>
                         <span className="badge bg-secondary">
-                          {question.type === "multiple-choice" &&
-                            "Multiple Choice"}
-                          {question.type === "true-false" &&
-                            "True/False"}
-                          {question.type === "fill-in-blank" &&
-                            "Fill in the Blank"}
+                          {question.type === "multiple-choice" && "Multiple Choice"}
+                          {question.type === "true-false" && "True/False"}
+                          {question.type === "fill-in-blank" && "Fill in the Blank"}
                         </span>
-                        <span className="text-muted">
-                          ({question.points} pts)
-                        </span>
+                        <span className="text-muted">({question.points} pts)</span>
                       </div>
                       <div
                         className="question-preview mt-2"
                         dangerouslySetInnerHTML={{
-                          __html:
-                            question.question ||
-                            "<em>No question text</em>",
+                          __html: question.question || "<em>No question text</em>",
                         }}
                         style={{ color: "#666" }}
                       />
@@ -165,18 +168,14 @@ export default function QuizQuestionsEditor({
                       <Button
                         variant="outline-primary"
                         size="sm"
-                        onClick={() =>
-                          setEditingQuestionId(question._id)
-                        }
+                        onClick={() => setEditingQuestionId(question._id)}
                       >
                         Edit
                       </Button>
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        onClick={() =>
-                          handleDeleteQuestion(question._id)
-                        }
+                        onClick={() => handleDeleteQuestion(question._id)}
                       >
                         Delete
                       </Button>
@@ -189,28 +188,14 @@ export default function QuizQuestionsEditor({
         </div>
       )}
 
-      {/* Action Buttons - Canvas Style */}
       <div className="d-flex justify-content-end gap-2 pt-3 border-top">
-        <Button
-          variant="light"
-          onClick={onCancel}
-          className="px-4"
-          style={{ border: "1px solid #ccc" }}
-        >
+        <Button variant="light" onClick={onCancel} className="px-4" style={{ border: "1px solid #ccc" }}>
           Cancel
         </Button>
-        <Button
-          variant="danger"
-          onClick={handleSave}
-          className="px-4"
-        >
+        <Button variant="danger" onClick={handleSave} className="px-4">
           Save
         </Button>
-        <Button
-          variant="outline-danger"
-          onClick={handleSaveAndPublish}
-          className="px-4"
-        >
+        <Button variant="outline-danger" onClick={handleSaveAndPublish} className="px-4">
           Save &amp; Publish
         </Button>
       </div>

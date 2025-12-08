@@ -48,9 +48,7 @@ export default function QuizPreviewPage() {
         </div>
         <Button
           variant="primary"
-          onClick={() =>
-            router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)
-          }
+          onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}
         >
           Go to Editor
         </Button>
@@ -62,43 +60,46 @@ export default function QuizPreviewPage() {
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex];
 
-  // Robust type detection helpers - support both 'type' and 'questionType' fields
-  const isMultipleChoice = (q: any) => {
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return (
-      t === "multiple-choice" ||
-      t === "multiple_choice" ||
-      t === "multiple choice" ||
-      t === "mc" ||
-      (Array.isArray(q.choices) && q.choices.length > 0) ||
-      (Array.isArray(q.options) && q.options.length > 0)
-    );
+  // IMPROVED: More specific type detection - check in order of specificity
+  const getQuestionType = (q: any) => {
+    // Check for fill-in-blank FIRST (most specific)
+    if (Array.isArray(q.blanks) && q.blanks.length > 0) {
+      return "fill-in-blank";
+    }
+
+    const typeStr = (q.type || q.questionType || "").toString().toLowerCase();
+    
+    if (typeStr.includes("blank") || typeStr.includes("fill")) {
+      return "fill-in-blank";
+    }
+
+    // Check for true/false
+    if (typeof q.correctAnswer === "boolean") {
+      return "true-false";
+    }
+
+    if (typeStr.includes("true") || typeStr.includes("false")) {
+      return "true-false";
+    }
+
+    // Check for multiple choice
+    if (Array.isArray(q.choices) && q.choices.length > 0) {
+      return "multiple-choice";
+    }
+
+    if (Array.isArray(q.options) && q.options.length > 0) {
+      return "multiple-choice";
+    }
+
+    if (typeStr.includes("multiple") || typeStr.includes("choice")) {
+      return "multiple-choice";
+    }
+
+    // Default to multiple choice
+    return "multiple-choice";
   };
 
-  const isTrueFalse = (q: any) => {
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return (
-      t === "true-false" ||
-      t === "true_false" ||
-      t === "true/false" ||
-      t === "true false" ||
-      t.includes("true") ||
-      t.includes("false") ||
-      typeof q.correctAnswer === "boolean"
-    );
-  };
-
-  const isFillInBlank = (q: any) => {
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return (
-      t === "fill-in-blank" ||
-      t === "fill_in_blank" ||
-      t === "fill in the blank" ||
-      t.includes("blank") ||
-      t.includes("fill") ||
-      Array.isArray(q.blanks)
-    );
-  };
+  const questionType = getQuestionType(currentQuestion);
 
   const handleAnswerChange = (value: any) => {
     setAnswers((prev) => ({
@@ -107,10 +108,19 @@ export default function QuizPreviewPage() {
     }));
   };
 
+  const handleBlankAnswerChange = (blankIndex: number, value: string) => {
+    const currentAnswers = answers[currentQuestion._id] || {};
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion._id]: {
+        ...currentAnswers,
+        [blankIndex]: value,
+      },
+    }));
+  };
+
   const handleNext = () => {
-    setCurrentQuestionIndex((idx) =>
-      Math.min(totalQuestions - 1, idx + 1)
-    );
+    setCurrentQuestionIndex((idx) => Math.min(totalQuestions - 1, idx + 1));
   };
 
   const handlePrevious = () => {
@@ -134,7 +144,14 @@ export default function QuizPreviewPage() {
 
   const isAnswered = (q: any) => {
     const value = answers[q._id];
-    return value !== undefined && value !== "";
+    if (value === undefined || value === null) return false;
+
+    // For fill-in-blank with multiple blanks, check if any blank is filled
+    if (typeof value === "object" && !Array.isArray(value)) {
+      return Object.values(value).some((v) => v !== "" && v !== undefined);
+    }
+
+    return value !== "";
   };
 
   return (
@@ -158,9 +175,7 @@ export default function QuizPreviewPage() {
           {quiz.description && (
             <div className="mb-4">
               <h5>Quiz Instructions</h5>
-              <div
-                dangerouslySetInnerHTML={{ __html: quiz.description }}
-              />
+              <div dangerouslySetInnerHTML={{ __html: quiz.description }} />
             </div>
           )}
 
@@ -179,41 +194,39 @@ export default function QuizPreviewPage() {
             <div
               className="mb-4"
               dangerouslySetInnerHTML={{
-                __html:
-                  currentQuestion.question ||
-                  "<p>No question text</p>",
+                __html: currentQuestion.question || "<p>No question text</p>",
               }}
             />
 
-            {/* MULTIPLE CHOICE */}
-            {isMultipleChoice(currentQuestion) && (
+            {/* Render ONLY ONE question type based on detection */}
+            {questionType === "multiple-choice" && (
               <div>
-                {/* Support both 'choices' (frontend format) and 'options' (database format) */}
                 {(() => {
-                  // Get choices from either 'choices' or 'options' field
                   let choicesList: any[] = [];
-                  
-                  if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
-                    // Frontend format: array of {text, correct}
+
+                  if (
+                    Array.isArray(currentQuestion.choices) &&
+                    currentQuestion.choices.length > 0
+                  ) {
                     choicesList = currentQuestion.choices;
-                  } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
-                    // Database format: array of strings with separate correctAnswer
+                  } else if (
+                    Array.isArray(currentQuestion.options) &&
+                    currentQuestion.options.length > 0
+                  ) {
                     choicesList = currentQuestion.options.map((opt: string) => ({
                       text: opt,
-                      correct: opt === currentQuestion.correctAnswer
                     }));
                   }
 
                   if (choicesList.length === 0) {
-                    return (
-                      <p className="text-muted">
-                        No answer choices available
-                      </p>
-                    );
+                    return <p className="text-muted">No answer choices available</p>;
                   }
 
                   return choicesList.map((choice: any, idx: number) => {
-                    const choiceText = (choice && choice.text) || choice || "";
+                    const choiceText =
+                      typeof choice === "string"
+                        ? choice
+                        : choice?.text || `Option ${idx + 1}`;
                     const selected = answers[currentQuestion._id] === choiceText;
 
                     return (
@@ -222,7 +235,7 @@ export default function QuizPreviewPage() {
                           type="radio"
                           id={`choice-${currentQuestion._id}-${idx}`}
                           name={`question-${currentQuestion._id}`}
-                          label={choiceText || `Option ${idx + 1}`}
+                          label={choiceText}
                           checked={selected}
                           onChange={() => handleAnswerChange(choiceText)}
                         />
@@ -233,8 +246,7 @@ export default function QuizPreviewPage() {
               </div>
             )}
 
-            {/* TRUE / FALSE */}
-            {isTrueFalse(currentQuestion) && (
+            {questionType === "true-false" && (
               <div>
                 <Form.Check
                   type="radio"
@@ -257,23 +269,46 @@ export default function QuizPreviewPage() {
               </div>
             )}
 
-            {/* FILL IN THE BLANK */}
-            {isFillInBlank(currentQuestion) && (
+            {questionType === "fill-in-blank" && (
               <div>
-                <p className="text-muted small mb-2">
-                  {currentQuestion.blanks && Array.isArray(currentQuestion.blanks) 
-                    ? "Type one of the possible correct answers below:"
-                    : "Type your answer below:"}
-                </p>
-                <Form.Control
-                  type="text"
-                  value={answers[currentQuestion._id] ?? ""}
-                  onChange={(e) =>
-                    handleAnswerChange(e.target.value)
-                  }
-                  placeholder="Type your answer here"
-                  style={{ maxWidth: "300px" }}
-                />
+                {Array.isArray(currentQuestion.blanks) &&
+                currentQuestion.blanks.length > 1 ? (
+                  // Multiple blanks
+                  <div>
+                    <p className="text-muted small mb-3">Fill in each blank below:</p>
+                    {currentQuestion.blanks.map((_: any, index: number) => {
+                      const currentAnswers = answers[currentQuestion._id] || {};
+                      return (
+                        <div key={index} className="mb-3">
+                          <Form.Label className="fw-semibold">
+                            Blank {index + 1}:
+                          </Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={currentAnswers[index] || ""}
+                            onChange={(e) =>
+                              handleBlankAnswerChange(index, e.target.value)
+                            }
+                            placeholder={`Answer for blank ${index + 1}`}
+                            style={{ maxWidth: "400px" }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  // Single blank
+                  <div>
+                    <p className="text-muted small mb-2">Type your answer below:</p>
+                    <Form.Control
+                      type="text"
+                      value={answers[currentQuestion._id] ?? ""}
+                      onChange={(e) => handleAnswerChange(e.target.value)}
+                      placeholder="Type your answer here"
+                      style={{ maxWidth: "400px" }}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -300,9 +335,7 @@ export default function QuizPreviewPage() {
           <div className="d-flex justify-content-end gap-2 mb-4">
             <Button
               variant="outline-secondary"
-              onClick={() =>
-                router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)
-              }
+              onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}
             >
               Edit Quiz
             </Button>

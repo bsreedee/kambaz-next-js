@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../../../store";
@@ -16,15 +16,14 @@ export default function QuizEditorPage() {
   const router = useRouter();
   const dispatch = useDispatch();
 
-  const [activeTab, setActiveTab] = useState<"details" | "questions">(
-    "details"
-  );
+  const [activeTab, setActiveTab] = useState<"details" | "questions">("details");
   const [quiz, setQuiz] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Use ref to track latest quiz state
+  const quizRef = useRef<any>(null);
 
-  const { currentUser } = useSelector(
-    (state: RootState) => state.accountReducer
-  );
+  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
   const isFaculty = (currentUser as any)?.role === "FACULTY";
 
   useEffect(() => {
@@ -36,10 +35,16 @@ export default function QuizEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qid]);
 
+  // Update ref whenever quiz changes
+  useEffect(() => {
+    quizRef.current = quiz;
+  }, [quiz]);
+
   const fetchQuiz = async () => {
     try {
       const data = await client.findQuizById(qid);
       setQuiz(data);
+      quizRef.current = data;
     } catch (error) {
       console.error("Error fetching quiz:", error);
     } finally {
@@ -47,31 +52,60 @@ export default function QuizEditorPage() {
     }
   };
 
+  // Auto-save when switching tabs
+  const handleTabChange = async (newTab: "details" | "questions") => {
+    if (quizRef.current) {
+      try {
+        const saved = await client.updateQuiz(quizRef.current);
+        setQuiz(saved);
+        quizRef.current = saved;
+        dispatch(updateQuiz(saved));
+      } catch (error) {
+        console.error("Error auto-saving:", error);
+      }
+    }
+    setActiveTab(newTab);
+  };
+
+  // Update quiz state without saving
+  const handleQuizChange = (updatedQuiz: any) => {
+    setQuiz(updatedQuiz);
+    quizRef.current = updatedQuiz;
+  };
+
   const handleSave = async (updatedQuiz: any) => {
     try {
       const saved = await client.updateQuiz(updatedQuiz);
+      setQuiz(saved);
+      quizRef.current = saved;
       dispatch(updateQuiz(saved));
       router.push(`/Courses/${cid}/Quizzes/${qid}`);
     } catch (error) {
       console.error("Error saving quiz:", error);
+      alert("Error saving quiz. Please try again.");
     }
   };
 
   const handleSaveAndPublish = async (updatedQuiz: any) => {
     try {
-      const saved = await client.updateQuiz({
-        ...updatedQuiz,
-        published: true,
-      });
+      const saved = await client.updateQuiz({ ...updatedQuiz, published: true });
       dispatch(updateQuiz(saved));
       router.push(`/Courses/${cid}/Quizzes`);
     } catch (error) {
       console.error("Error saving and publishing quiz:", error);
+      alert("Error saving and publishing quiz. Please try again.");
     }
   };
 
-  const handleCancel = () => {
-    // Go back to the Quiz Details page (initial page when clicking a quiz)
+  const handleCancel = async () => {
+    // Auto-save before canceling
+    if (quizRef.current) {
+      try {
+        await client.updateQuiz(quizRef.current);
+      } catch (error) {
+        console.error("Error auto-saving before cancel:", error);
+      }
+    }
     router.push(`/Courses/${cid}/Quizzes/${qid}`);
   };
 
@@ -91,36 +125,21 @@ export default function QuizEditorPage() {
     );
   }
 
-  const totalPoints =
-    quiz.questions?.reduce(
-      (sum: number, q: any) => sum + (q.points || 0),
-      0
-    ) || 0;
+  const totalPoints = quiz.questions?.reduce((sum: number, q: any) => sum + (q.points || 0), 0) || 0;
 
   return (
-    <div
-      style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", paddingTop: "20px" }}
-    >
+    <div style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", paddingTop: "20px" }}>
       <Container style={{ maxWidth: "900px" }}>
-        {/* Header with Points and Status */}
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="mb-0">Edit Quiz</h5>
           <div className="d-flex align-items-center gap-3">
-            <span>
-              <strong>Points:</strong> {totalPoints}
+            <span><strong>Points:</strong> {totalPoints}</span>
+            <span className={`badge ${quiz?.published ? "bg-success" : "bg-secondary"}`}>
+              {quiz?.published ? "✓ Published" : "⊝ Not Published"}
             </span>
-            <span
-              className={`badge ${
-                quiz?.published ? "bg-success" : "bg-secondary"
-              }`}
-            >
-              {quiz?.published ? "✓ Published" : "⭕ Not Published"}
-            </span>
-            <button className="btn btn-link text-secondary">⋮</button>
           </div>
         </div>
 
-        {/* Canvas-style Tabs */}
         <div className="bg-white border-bottom">
           <div className="d-flex">
             <button
@@ -129,11 +148,8 @@ export default function QuizEditorPage() {
                   ? "text-danger border-bottom border-danger border-3"
                   : "text-dark"
               }`}
-              onClick={() => setActiveTab("details")}
-              style={{
-                borderRadius: 0,
-                fontWeight: activeTab === "details" ? "600" : "normal",
-              }}
+              onClick={() => handleTabChange("details")}
+              style={{ borderRadius: 0, fontWeight: activeTab === "details" ? "600" : "normal" }}
             >
               Details
             </button>
@@ -143,18 +159,14 @@ export default function QuizEditorPage() {
                   ? "text-danger border-bottom border-danger border-3"
                   : "text-dark"
               }`}
-              onClick={() => setActiveTab("questions")}
-              style={{
-                borderRadius: 0,
-                fontWeight: activeTab === "questions" ? "600" : "normal",
-              }}
+              onClick={() => handleTabChange("questions")}
+              style={{ borderRadius: 0, fontWeight: activeTab === "questions" ? "600" : "normal" }}
             >
               Questions
             </button>
           </div>
         </div>
 
-        {/* Tab Content */}
         <div className="bg-white p-4">
           {activeTab === "details" ? (
             <QuizDetailsEditor
@@ -162,6 +174,7 @@ export default function QuizEditorPage() {
               onSave={handleSave}
               onSaveAndPublish={handleSaveAndPublish}
               onCancel={handleCancel}
+              onChange={handleQuizChange}
             />
           ) : (
             <QuizQuestionsEditor
@@ -169,6 +182,7 @@ export default function QuizEditorPage() {
               onSave={handleSave}
               onSaveAndPublish={handleSaveAndPublish}
               onCancel={handleCancel}
+              onChange={handleQuizChange}
             />
           )}
         </div>
