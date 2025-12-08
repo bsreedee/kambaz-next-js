@@ -30,11 +30,42 @@ export default function QuizTakingPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
-  const getQuestionType = (q: any) => {
-    if (Array.isArray(q.blanks) && q.blanks.length > 0) return "fill-in-blank";
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    if (t.includes("blank") || t.includes("fill")) return "fill-in-blank";
-    if (typeof q.correctAnswer === "boolean" || t.includes("true") || t.includes("false")) return "true-false";
+  const getQuestionType = (q: any): "multiple-choice" | "true-false" | "fill-in-blank" => {
+    // PRIORITY 1: Check explicit type field first
+    const explicitType = (q.type || q.questionType || "").toString().toLowerCase().trim();
+    
+    if (explicitType.includes("true") || explicitType.includes("false")) {
+      return "true-false";
+    }
+    
+    if (explicitType.includes("fill") || explicitType.includes("blank")) {
+      return "fill-in-blank";
+    }
+    
+    if (explicitType.includes("multiple") || explicitType.includes("choice")) {
+      return "multiple-choice";
+    }
+    
+    // PRIORITY 2: Check by data structure (only if type is ambiguous)
+    
+    // Check for true/false by correctAnswer type
+    if (typeof q.correctAnswer === "boolean") {
+      return "true-false";
+    }
+    
+    // Check for multiple choice by presence of choices/options
+    // IMPORTANT: Check this BEFORE checking blanks
+    if ((Array.isArray(q.choices) && q.choices.length > 0) ||
+        (Array.isArray(q.options) && q.options.length > 0)) {
+      return "multiple-choice";
+    }
+    
+    // Check for fill-in-blank LAST
+    if (Array.isArray(q.blanks) && q.blanks.length > 0) {
+      return "fill-in-blank";
+    }
+    
+    // DEFAULT: Return multiple-choice if nothing else matches
     return "multiple-choice";
   };
 
@@ -359,12 +390,16 @@ export default function QuizTakingPage() {
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const questionId = currentQuestionIndex.toString();
   const questionType = getQuestionType(currentQuestion);
+  const allowMultipleAnswers = currentQuestion.allowMultipleAnswers || false;
 
   const isAnswered = (qIdx: number) => {
     const value = answers[qIdx.toString()];
     if (value === undefined || value === null) return false;
     if (typeof value === "object" && !Array.isArray(value)) {
       return Object.values(value).some((v) => v !== "" && v !== undefined);
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0 && value.some(v => v !== "" && v !== undefined);
     }
     return value !== "";
   };
@@ -431,22 +466,68 @@ export default function QuizTakingPage() {
 
                   return choicesList.map((choice: any, idx: number) => {
                     const choiceText = typeof choice === "string" ? choice : (choice?.text || `Option ${idx + 1}`);
-                    const selected = answers[questionId] === choiceText;
+                    
+                    // Handle multiple answers vs single answer
+                    const currentAnswerValue = answers[questionId];
+                    let isSelected = false;
+                    
+                    if (allowMultipleAnswers) {
+                      // For multiple answers, check if this choice is in the array
+                      isSelected = Array.isArray(currentAnswerValue) 
+                        ? currentAnswerValue.includes(choiceText)
+                        : false;
+                    } else {
+                      // For single answer, check equality
+                      isSelected = currentAnswerValue === choiceText;
+                    }
 
                     return (
                       <div
                         key={idx}
                         className={`mb-3 p-3 border rounded`}
                         style={{ cursor: "pointer" }}
-                        onClick={() => handleAnswerChange(choiceText)}
+                        onClick={() => {
+                          if (allowMultipleAnswers) {
+                            // Toggle this choice in the array
+                            const currentAnswers = Array.isArray(answers[questionId]) 
+                              ? [...answers[questionId]] 
+                              : [];
+                            
+                            if (currentAnswers.includes(choiceText)) {
+                              // Remove if already selected
+                              handleAnswerChange(currentAnswers.filter(a => a !== choiceText));
+                            } else {
+                              // Add if not selected
+                              handleAnswerChange([...currentAnswers, choiceText]);
+                            }
+                          } else {
+                            // Single answer mode
+                            handleAnswerChange(choiceText);
+                          }
+                        }}
                       >
                         <Form.Check
-                          type="radio"
+                          type={allowMultipleAnswers ? "checkbox" : "radio"}
                           id={`choice-${questionId}-${idx}`}
                           name={`question-${questionId}`}
                           label={choiceText}
-                          checked={selected}
-                          onChange={() => handleAnswerChange(choiceText)}
+                          checked={isSelected}
+                          onChange={() => {
+                            if (allowMultipleAnswers) {
+                              // Toggle logic
+                              const currentAnswers = Array.isArray(answers[questionId]) 
+                                ? [...answers[questionId]] 
+                                : [];
+                              
+                              if (currentAnswers.includes(choiceText)) {
+                                handleAnswerChange(currentAnswers.filter(a => a !== choiceText));
+                              } else {
+                                handleAnswerChange([...currentAnswers, choiceText]);
+                              }
+                            } else {
+                              handleAnswerChange(choiceText);
+                            }
+                          }}
                           className="fs-5"
                           style={{ cursor: "pointer" }}
                         />
@@ -454,6 +535,11 @@ export default function QuizTakingPage() {
                     );
                   });
                 })()}
+                {allowMultipleAnswers && (
+                  <div className="mt-2 text-muted small">
+                    <em>Select all that apply (multiple answers allowed)</em>
+                  </div>
+                )}
               </div>
             )}
 

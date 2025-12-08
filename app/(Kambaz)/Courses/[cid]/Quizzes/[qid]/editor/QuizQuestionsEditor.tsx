@@ -27,7 +27,7 @@ export default function QuizQuestionsEditor({
       // Deep copy to avoid mutation
       const questionsCopy = JSON.parse(JSON.stringify(quiz.questions));
       setQuestions(questionsCopy);
-      setOriginalQuestions(questionsCopy);
+      setOriginalQuestions(JSON.parse(JSON.stringify(quiz.questions)));
     }
   }, [quiz]);
 
@@ -43,6 +43,7 @@ export default function QuizQuestionsEditor({
         { text: "", correct: false },
         { text: "", correct: false },
       ],
+      allowMultipleAnswers: false,
     };
     const newQuestions = [...questions, newQuestion];
     setQuestions(newQuestions);
@@ -65,6 +66,11 @@ export default function QuizQuestionsEditor({
     setQuestions(newQuestions);
     setEditingQuestionId(null);
 
+    // Update original questions
+    setOriginalQuestions((prev) => 
+      prev.map((q) => q._id === questionId ? { ...updatedQuestion } : q)
+    );
+
     // Notify parent
     if (onChange) {
       onChange({
@@ -85,6 +91,11 @@ export default function QuizQuestionsEditor({
     setQuestions(newQuestions);
     setEditingQuestionId(null);
 
+    // Update original questions
+    setOriginalQuestions((prev) => 
+      prev.filter((q) => q._id !== questionId)
+    );
+
     // Notify parent
     if (onChange) {
       onChange({
@@ -98,14 +109,34 @@ export default function QuizQuestionsEditor({
   const handleCancelEdit = () => {
     // If it's a temp question (being created), remove it
     if (editingQuestionId?.startsWith("temp_")) {
-      setQuestions((prev) => prev.filter((q) => q._id !== editingQuestionId));
+      const newQuestions = questions.filter((q) => q._id !== editingQuestionId);
+      setQuestions(newQuestions);
+      
+      // Notify parent about the change
+      if (onChange) {
+        onChange({
+          ...quiz,
+          questions: newQuestions,
+          points: newQuestions.reduce((sum, q) => sum + (q.points || 0), 0),
+        });
+      }
     } else {
       // If it's an existing question, restore original data
       const originalQuestion = originalQuestions.find((q: any) => q._id === editingQuestionId);
       if (originalQuestion) {
-        setQuestions((prev) =>
-          prev.map((q) => (q._id === editingQuestionId ? { ...originalQuestion } : q))
+        const newQuestions = questions.map((q) => 
+          q._id === editingQuestionId ? { ...originalQuestion } : q
         );
+        setQuestions(newQuestions);
+        
+        // Notify parent about the change
+        if (onChange) {
+          onChange({
+            ...quiz,
+            questions: newQuestions,
+            points: newQuestions.reduce((sum, q) => sum + (q.points || 0), 0),
+          });
+        }
       }
     }
     setEditingQuestionId(null);
@@ -171,6 +202,9 @@ export default function QuizQuestionsEditor({
                         <span className="text-muted">
                           ({question.points} pts)
                         </span>
+                        {question.type === "multiple-choice" && question.allowMultipleAnswers && (
+                          <span className="badge bg-info">Multiple Answers</span>
+                        )}
                       </div>
                       <div
                         className="question-preview mt-2"

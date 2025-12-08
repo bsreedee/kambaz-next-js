@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { Form, Button, Alert } from "react-bootstrap";
-import { FaTrash, FaCheck } from "react-icons/fa";
+import { FaTrash, FaCheck, FaCheckSquare } from "react-icons/fa";
 
 interface QuestionEditorProps {
   question: any;
@@ -22,25 +22,47 @@ export default function QuestionEditor({
     points: 4,
     question: "",
     choices: [] as any[],
-    correctAnswer: null as boolean | null,
+    correctAnswer: null as any,
     blanks: [] as string[],
+    allowMultipleAnswers: false,
   });
 
   useEffect(() => {
+    // Parse correctAnswer to handle both single and multiple answers
+    const correctAnswer = question.correctAnswer;
+    const allowMultipleAnswers = Array.isArray(correctAnswer) || question.allowMultipleAnswers || false;
+    
+    // Parse choices with correct status
+    let choices = [];
+    if (question.choices && question.choices.length > 0) {
+      if (typeof question.choices[0] === 'string') {
+        // Convert string choices to objects
+        choices = question.choices.map((text: string) => ({
+          text,
+          correct: allowMultipleAnswers 
+            ? (Array.isArray(correctAnswer) ? correctAnswer.includes(text) : correctAnswer === text)
+            : (correctAnswer === text)
+        }));
+      } else {
+        choices = question.choices;
+      }
+    }
+
     setFormData({
       title: question.title || "Question",
       type: question.type || "multiple-choice",
       points: question.points || 4,
       question: question.question || "",
-      choices: question.choices && question.choices.length > 0
-        ? question.choices
+      choices: choices.length > 0
+        ? choices
         : [
-            { text: "", correct: true },  // First option selected by default
+            { text: "", correct: true },
             { text: "", correct: false },
             { text: "", correct: false },
           ],
-      correctAnswer: question.correctAnswer !== undefined ? question.correctAnswer : true,
+      correctAnswer: correctAnswer !== undefined ? correctAnswer : null,
       blanks: question.blanks && question.blanks.length > 0 ? question.blanks : [""],
+      allowMultipleAnswers: allowMultipleAnswers,
     });
   }, [question]);
 
@@ -54,6 +76,7 @@ export default function QuestionEditor({
       type: newType,
       points: formData.points,
       question: formData.question,
+      allowMultipleAnswers: false, // Reset for non-multiple choice
     };
 
     switch (newType) {
@@ -100,12 +123,23 @@ export default function QuestionEditor({
   };
 
   const handleCorrectChoiceChange = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      choices: prev.choices.map((choice, i) =>
-        i === index ? { ...choice, correct: true } : { ...choice, correct: false }
-      ),
-    }));
+    if (formData.allowMultipleAnswers) {
+      // Toggle this choice's correctness
+      setFormData((prev) => ({
+        ...prev,
+        choices: prev.choices.map((choice, i) =>
+          i === index ? { ...choice, correct: !choice.correct } : choice
+        ),
+      }));
+    } else {
+      // Single answer mode - set only this one as correct
+      setFormData((prev) => ({
+        ...prev,
+        choices: prev.choices.map((choice, i) =>
+          i === index ? { ...choice, correct: true } : { ...choice, correct: false }
+        ),
+      }));
+    }
   };
 
   // Fill in the blank handlers
@@ -133,13 +167,22 @@ export default function QuestionEditor({
   const handleSubmit = () => {
     const payload: any = { ...formData };
 
-    // For multiple choice, store the correct choice text in `correctAnswer`
+    // For multiple choice
     if (payload.type === "multiple-choice") {
-      const correctChoice = payload.choices.find((c: any) => c.correct);
-      payload.correctAnswer = correctChoice ? (correctChoice.text || "") : null;
+      if (payload.allowMultipleAnswers) {
+        // Store array of correct answers
+        const correctChoices = payload.choices
+          .filter((c: any) => c.correct)
+          .map((c: any) => c.text || "");
+        payload.correctAnswer = correctChoices;
+      } else {
+        // Single correct answer
+        const correctChoice = payload.choices.find((c: any) => c.correct);
+        payload.correctAnswer = correctChoice ? (correctChoice.text || "") : null;
+      }
     }
 
-    // For fill-in-blank - store array of correct answers for each blank
+    // For fill-in-blank
     if (payload.type === "fill-in-blank") {
       payload.correctAnswer = payload.blanks;
     }
@@ -186,7 +229,7 @@ export default function QuestionEditor({
       {/* Instruction Text */}
       <p className="text-muted small mb-3">
         {formData.type === "multiple-choice" &&
-          "Enter your question and multiple answers, then select the one correct answer."}
+          "Enter your question and multiple answers, then select the one correct answer (or multiple if enabled)."}
         {formData.type === "true-false" &&
           "Enter your question text, then select if True or False is the correct answer."}
         {formData.type === "fill-in-blank" &&
@@ -221,6 +264,16 @@ export default function QuestionEditor({
       {/* MULTIPLE CHOICE */}
       {formData.type === "multiple-choice" && (
         <div className="mb-4">
+          <div className="mb-3">
+            <Form.Check
+              type="checkbox"
+              id="allowMultipleAnswers"
+              label="Allow multiple correct answers"
+              checked={formData.allowMultipleAnswers}
+              onChange={(e) => handleChange("allowMultipleAnswers", e.target.checked)}
+            />
+          </div>
+          
           <Form.Label className="fw-semibold">Answers:</Form.Label>
           {formData.choices.map((choice, index) => (
             <div key={index} className="mb-3">
@@ -232,16 +285,25 @@ export default function QuestionEditor({
                     onClick={() => handleCorrectChoiceChange(index)}
                     style={{ textDecoration: "none" }}
                   >
-                    {choice.correct ? (
-                      <FaCheck className="text-success" style={{ fontSize: "20px" }} />
+                    {formData.allowMultipleAnswers ? (
+                      choice.correct ? (
+                        <FaCheckSquare className="text-success" style={{ fontSize: "20px" }} />
+                      ) : (
+                        <span style={{ color: "#ccc", fontSize: "20px" }}>□</span>
+                      )
                     ) : (
-                      <span style={{ color: "#ccc", fontSize: "20px" }}>○</span>
+                      choice.correct ? (
+                        <FaCheck className="text-success" style={{ fontSize: "20px" }} />
+                      ) : (
+                        <span style={{ color: "#ccc", fontSize: "20px" }}>○</span>
+                      )
                     )}
                   </button>
                 </div>
                 <div className="flex-grow-1">
                   <div className="small text-muted mb-1">
                     {choice.correct ? "Correct Answer" : "Possible Answer"}
+                    {formData.allowMultipleAnswers && choice.correct && " (Multiple allowed)"}
                   </div>
                   <Form.Control
                     type="text"
@@ -329,7 +391,7 @@ export default function QuestionEditor({
           {formData.blanks.map((blank, index) => (
             <div key={index} className="mb-3 border rounded p-3 bg-light">
               <div className="d-flex align-items-center gap-2 mb-2">
-                <span className="badge bg-primary fs-6">[{index + 1}]</span>
+                <span className="badge bg-primary fs-6">{index + 1}</span>
                 <span className="fw-semibold">Blank {index + 1}</span>
                 {formData.blanks.length > 1 && (
                   <button
@@ -373,6 +435,12 @@ export default function QuestionEditor({
             style={{ border: "1px solid #ccc" }}
           >
             Cancel
+          </Button>
+          <Button 
+            variant="outline-danger" 
+            onClick={onDelete}
+          >
+            Delete Question
           </Button>
         </div>
         <Button 

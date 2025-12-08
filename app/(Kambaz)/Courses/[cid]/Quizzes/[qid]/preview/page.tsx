@@ -65,6 +65,7 @@ export default function QuizPreviewPage() {
   };
 
   const questionType = getQuestionType(currentQuestion);
+  const allowMultipleAnswers = currentQuestion.allowMultipleAnswers || false;
 
   const handleAnswerChange = (value: any) => {
     setAnswers((prev) => ({
@@ -112,6 +113,9 @@ export default function QuizPreviewPage() {
     if (value === undefined || value === null) return false;
     if (typeof value === "object" && !Array.isArray(value)) {
       return Object.values(value).some((v) => v !== "" && v !== undefined);
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0 && value.some(v => v !== "" && v !== undefined);
     }
     return value !== "";
   };
@@ -163,28 +167,79 @@ export default function QuizPreviewPage() {
 
                   return choicesList.map((choice: any, idx: number) => {
                     const choiceText = typeof choice === "string" ? choice : (choice?.text || `Option ${idx + 1}`);
-                    const selected = answers[currentQuestion._id] === choiceText;
+                    
+                    // Handle multiple answers vs single answer
+                    const currentAnswerValue = answers[currentQuestion._id];
+                    let selected = false;
+                    
+                    if (allowMultipleAnswers) {
+                      // For multiple answers, check if this choice is in the array
+                      selected = Array.isArray(currentAnswerValue) 
+                        ? currentAnswerValue.includes(choiceText)
+                        : false;
+                    } else {
+                      // For single answer, check equality
+                      selected = currentAnswerValue === choiceText;
+                    }
 
                     return (
                       <div
                         key={idx}
                         className={`mb-2 p-3 border rounded`}
                         style={{ cursor: "pointer" }}
-                        onClick={() => handleAnswerChange(choiceText)}
+                        onClick={() => {
+                          if (allowMultipleAnswers) {
+                            // Toggle this choice in the array
+                            const currentAnswers = Array.isArray(answers[currentQuestion._id]) 
+                              ? [...answers[currentQuestion._id]] 
+                              : [];
+                            
+                            if (currentAnswers.includes(choiceText)) {
+                              // Remove if already selected
+                              handleAnswerChange(currentAnswers.filter(a => a !== choiceText));
+                            } else {
+                              // Add if not selected
+                              handleAnswerChange([...currentAnswers, choiceText]);
+                            }
+                          } else {
+                            // Single answer mode
+                            handleAnswerChange(choiceText);
+                          }
+                        }}
                       >
                         <Form.Check
-                          type="radio"
+                          type={allowMultipleAnswers ? "checkbox" : "radio"}
                           id={`choice-${currentQuestion._id}-${idx}`}
                           name={`question-${currentQuestion._id}`}
                           label={choiceText}
                           checked={selected}
-                          onChange={() => handleAnswerChange(choiceText)}
+                          onChange={() => {
+                            if (allowMultipleAnswers) {
+                              // Toggle logic
+                              const currentAnswers = Array.isArray(answers[currentQuestion._id]) 
+                                ? [...answers[currentQuestion._id]] 
+                                : [];
+                              
+                              if (currentAnswers.includes(choiceText)) {
+                                handleAnswerChange(currentAnswers.filter(a => a !== choiceText));
+                              } else {
+                                handleAnswerChange([...currentAnswers, choiceText]);
+                              }
+                            } else {
+                              handleAnswerChange(choiceText);
+                            }
+                          }}
                           style={{ cursor: "pointer" }}
                         />
                       </div>
                     );
                   });
                 })()}
+                {allowMultipleAnswers && (
+                  <div className="mt-2 text-muted small">
+                    <em>Select all that apply (multiple answers allowed)</em>
+                  </div>
+                )}
               </div>
             )}
 
@@ -253,23 +308,27 @@ export default function QuizPreviewPage() {
             )}
           </div>
 
-          {/* Navigation Buttons */}
+          {/* Navigation Buttons - FIXED: Show Submit button on last question */}
           <div className="d-flex justify-content-between mb-4">
             <Button variant="secondary" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
               Previous
             </Button>
-            <Button variant="secondary" onClick={handleNext} disabled={currentQuestionIndex === totalQuestions - 1}>
-              Next
-            </Button>
+            
+            {currentQuestionIndex < totalQuestions - 1 ? (
+              <Button variant="secondary" onClick={handleNext}>
+                Next
+              </Button>
+            ) : (
+              <Button variant="danger" onClick={handleSubmit}>
+                Submit Preview
+              </Button>
+            )}
           </div>
 
-          {/* Submit Preview / Edit */}
+          {/* Edit button moved here */}
           <div className="d-flex justify-content-end gap-2 mb-4">
             <Button variant="outline-secondary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}>
               Edit Quiz
-            </Button>
-            <Button variant="danger" onClick={handleSubmit}>
-              Submit Preview
             </Button>
           </div>
 
