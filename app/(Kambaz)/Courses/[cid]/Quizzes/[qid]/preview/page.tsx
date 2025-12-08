@@ -15,9 +15,7 @@ export default function QuizPreviewPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [startTime] = useState(new Date());
-  const { currentUser } = useSelector(
-    (state: RootState) => state.accountReducer
-  );
+  const { currentUser } = useSelector((state: RootState) => state.accountReducer);
 
   useEffect(() => {
     const load = async () => {
@@ -46,10 +44,7 @@ export default function QuizPreviewPage() {
         <div className="alert alert-warning">
           This quiz has no questions yet. Add questions in the editor first.
         </div>
-        <Button
-          variant="primary"
-          onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}
-        >
+        <Button variant="primary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}>
           Go to Editor
         </Button>
       </Container>
@@ -60,42 +55,12 @@ export default function QuizPreviewPage() {
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex];
 
-  // IMPROVED: More specific type detection - check in order of specificity
+  // Get question type
   const getQuestionType = (q: any) => {
-    // Check for fill-in-blank FIRST (most specific)
-    if (Array.isArray(q.blanks) && q.blanks.length > 0) {
-      return "fill-in-blank";
-    }
-
-    const typeStr = (q.type || q.questionType || "").toString().toLowerCase();
-    
-    if (typeStr.includes("blank") || typeStr.includes("fill")) {
-      return "fill-in-blank";
-    }
-
-    // Check for true/false
-    if (typeof q.correctAnswer === "boolean") {
-      return "true-false";
-    }
-
-    if (typeStr.includes("true") || typeStr.includes("false")) {
-      return "true-false";
-    }
-
-    // Check for multiple choice
-    if (Array.isArray(q.choices) && q.choices.length > 0) {
-      return "multiple-choice";
-    }
-
-    if (Array.isArray(q.options) && q.options.length > 0) {
-      return "multiple-choice";
-    }
-
-    if (typeStr.includes("multiple") || typeStr.includes("choice")) {
-      return "multiple-choice";
-    }
-
-    // Default to multiple choice
+    if (Array.isArray(q.blanks) && q.blanks.length > 0) return "fill-in-blank";
+    const t = (q.type || q.questionType || "").toString().toLowerCase();
+    if (t.includes("blank") || t.includes("fill")) return "fill-in-blank";
+    if (typeof q.correctAnswer === "boolean" || t.includes("true") || t.includes("false")) return "true-false";
     return "multiple-choice";
   };
 
@@ -145,24 +110,18 @@ export default function QuizPreviewPage() {
   const isAnswered = (q: any) => {
     const value = answers[q._id];
     if (value === undefined || value === null) return false;
-
-    // For fill-in-blank with multiple blanks, check if any blank is filled
     if (typeof value === "object" && !Array.isArray(value)) {
       return Object.values(value).some((v) => v !== "" && v !== undefined);
     }
-
     return value !== "";
   };
 
   return (
     <Container className="mt-4" style={{ maxWidth: "900px" }}>
       <div className="row">
-        {/* Main Quiz Area */}
         <div className="col-md-8">
-          {/* Quiz Title */}
           <h3 className="mb-3">{quiz.title}</h3>
 
-          {/* Preview Notice */}
           <div className="alert alert-warning d-flex align-items-center">
             <span className="me-2">ℹ️</span>
             <span>
@@ -171,7 +130,6 @@ export default function QuizPreviewPage() {
             </span>
           </div>
 
-          {/* Optional Description */}
           {quiz.description && (
             <div className="mb-4">
               <h5>Quiz Instructions</h5>
@@ -182,40 +140,21 @@ export default function QuizPreviewPage() {
           {/* Question Display */}
           <div className="border rounded p-4 bg-white mb-4">
             <div className="d-flex justify-content-between align-items-start mb-3">
-              <h6>
-                Question {currentQuestionIndex + 1} of {totalQuestions}
-              </h6>
-              <span className="badge bg-secondary">
-                {currentQuestion.points || 0} pts
-              </span>
+              <h6>Question {currentQuestionIndex + 1} of {totalQuestions}</h6>
+              <span className="badge bg-secondary">{currentQuestion.points || 0} pts</span>
             </div>
 
-            {/* Question text */}
-            <div
-              className="mb-4"
-              dangerouslySetInnerHTML={{
-                __html: currentQuestion.question || "<p>No question text</p>",
-              }}
-            />
+            <div className="mb-4" dangerouslySetInnerHTML={{ __html: currentQuestion.question || "<p>No question text</p>" }} />
 
-            {/* Render ONLY ONE question type based on detection */}
+            {/* MULTIPLE CHOICE */}
             {questionType === "multiple-choice" && (
               <div>
                 {(() => {
                   let choicesList: any[] = [];
-
-                  if (
-                    Array.isArray(currentQuestion.choices) &&
-                    currentQuestion.choices.length > 0
-                  ) {
+                  if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
                     choicesList = currentQuestion.choices;
-                  } else if (
-                    Array.isArray(currentQuestion.options) &&
-                    currentQuestion.options.length > 0
-                  ) {
-                    choicesList = currentQuestion.options.map((opt: string) => ({
-                      text: opt,
-                    }));
+                  } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+                    choicesList = currentQuestion.options.map((opt: string) => ({ text: opt }));
                   }
 
                   if (choicesList.length === 0) {
@@ -223,14 +162,16 @@ export default function QuizPreviewPage() {
                   }
 
                   return choicesList.map((choice: any, idx: number) => {
-                    const choiceText =
-                      typeof choice === "string"
-                        ? choice
-                        : choice?.text || `Option ${idx + 1}`;
+                    const choiceText = typeof choice === "string" ? choice : (choice?.text || `Option ${idx + 1}`);
                     const selected = answers[currentQuestion._id] === choiceText;
 
                     return (
-                      <div key={idx} className="mb-2">
+                      <div
+                        key={idx}
+                        className={`mb-2 p-3 border rounded`}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleAnswerChange(choiceText)}
+                      >
                         <Form.Check
                           type="radio"
                           id={`choice-${currentQuestion._id}-${idx}`}
@@ -238,6 +179,7 @@ export default function QuizPreviewPage() {
                           label={choiceText}
                           checked={selected}
                           onChange={() => handleAnswerChange(choiceText)}
+                          style={{ cursor: "pointer" }}
                         />
                       </div>
                     );
@@ -246,49 +188,48 @@ export default function QuizPreviewPage() {
               </div>
             )}
 
+            {/* TRUE/FALSE */}
             {questionType === "true-false" && (
               <div>
-                <Form.Check
-                  type="radio"
-                  id={`tf-${currentQuestion._id}-true`}
-                  name={`question-${currentQuestion._id}`}
-                  label="True"
-                  className="mb-2"
-                  checked={answers[currentQuestion._id] === true}
-                  onChange={() => handleAnswerChange(true)}
-                />
-                <Form.Check
-                  type="radio"
-                  id={`tf-${currentQuestion._id}-false`}
-                  name={`question-${currentQuestion._id}`}
-                  label="False"
-                  className="mb-2"
-                  checked={answers[currentQuestion._id] === false}
-                  onChange={() => handleAnswerChange(false)}
-                />
+                {[true, false].map((value) => {
+                  const selected = answers[currentQuestion._id] === value;
+                  return (
+                    <div
+                      key={value.toString()}
+                      className={`mb-2 p-3 border rounded`}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleAnswerChange(value)}
+                    >
+                      <Form.Check
+                        type="radio"
+                        id={`tf-${currentQuestion._id}-${value}`}
+                        name={`question-${currentQuestion._id}`}
+                        label={value ? "True" : "False"}
+                        checked={selected}
+                        onChange={() => handleAnswerChange(value)}
+                        style={{ cursor: "pointer" }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
 
+            {/* FILL IN THE BLANKS */}
             {questionType === "fill-in-blank" && (
               <div>
-                {Array.isArray(currentQuestion.blanks) &&
-                currentQuestion.blanks.length > 1 ? (
-                  // Multiple blanks
+                {Array.isArray(currentQuestion.blanks) && currentQuestion.blanks.length > 1 ? (
                   <div>
                     <p className="text-muted small mb-3">Fill in each blank below:</p>
                     {currentQuestion.blanks.map((_: any, index: number) => {
                       const currentAnswers = answers[currentQuestion._id] || {};
                       return (
                         <div key={index} className="mb-3">
-                          <Form.Label className="fw-semibold">
-                            Blank {index + 1}:
-                          </Form.Label>
+                          <Form.Label className="fw-semibold">Blank {index + 1}:</Form.Label>
                           <Form.Control
                             type="text"
                             value={currentAnswers[index] || ""}
-                            onChange={(e) =>
-                              handleBlankAnswerChange(index, e.target.value)
-                            }
+                            onChange={(e) => handleBlankAnswerChange(index, e.target.value)}
                             placeholder={`Answer for blank ${index + 1}`}
                             style={{ maxWidth: "400px" }}
                           />
@@ -297,7 +238,6 @@ export default function QuizPreviewPage() {
                     })}
                   </div>
                 ) : (
-                  // Single blank
                   <div>
                     <p className="text-muted small mb-2">Type your answer below:</p>
                     <Form.Control
@@ -315,28 +255,17 @@ export default function QuizPreviewPage() {
 
           {/* Navigation Buttons */}
           <div className="d-flex justify-content-between mb-4">
-            <Button
-              variant="secondary"
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
-            >
+            <Button variant="secondary" onClick={handlePrevious} disabled={currentQuestionIndex === 0}>
               Previous
             </Button>
-            <Button
-              variant="secondary"
-              onClick={handleNext}
-              disabled={currentQuestionIndex === totalQuestions - 1}
-            >
+            <Button variant="secondary" onClick={handleNext} disabled={currentQuestionIndex === totalQuestions - 1}>
               Next
             </Button>
           </div>
 
           {/* Submit Preview / Edit */}
           <div className="d-flex justify-content-end gap-2 mb-4">
-            <Button
-              variant="outline-secondary"
-              onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}
-            >
+            <Button variant="outline-secondary" onClick={() => router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)}>
               Edit Quiz
             </Button>
             <Button variant="danger" onClick={handleSubmit}>
@@ -344,7 +273,6 @@ export default function QuizPreviewPage() {
             </Button>
           </div>
 
-          {/* Quiz Save Info */}
           <div className="text-center text-muted mb-3">
             <small>Quiz started at {formatStartTime()}</small>
           </div>
@@ -352,18 +280,15 @@ export default function QuizPreviewPage() {
 
         {/* Sidebar - Question Navigation */}
         <div className="col-md-4">
-          <div
-            className="border rounded p-3 bg-white position-sticky"
-            style={{ top: "20px" }}
-          >
+          <div className="border rounded p-3 bg-white position-sticky" style={{ top: "20px" }}>
             <h6 className="mb-3">Questions</h6>
             <ul className="list-unstyled">
               {questions.map((q: any, idx: number) => (
                 <li key={q._id} className="mb-2">
                   <button
                     type="button"
-                    className={`btn btn-link text-decoration-none w-100 text-start ${
-                      idx === currentQuestionIndex ? "fw-bold" : ""
+                    className={`btn w-100 text-start ${
+                      idx === currentQuestionIndex ? "btn-primary" : "btn-outline-secondary"
                     }`}
                     onClick={() => setCurrentQuestionIndex(idx)}
                   >

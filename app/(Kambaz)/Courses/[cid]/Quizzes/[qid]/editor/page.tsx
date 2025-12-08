@@ -19,7 +19,7 @@ export default function QuizEditorPage() {
   const [activeTab, setActiveTab] = useState<"details" | "questions">("details");
   const [quiz, setQuiz] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Use ref to track latest quiz state
   const quizRef = useRef<any>(null);
 
@@ -133,7 +133,9 @@ export default function QuizEditorPage() {
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="mb-0">Edit Quiz</h5>
           <div className="d-flex align-items-center gap-3">
-            <span><strong>Points:</strong> {totalPoints}</span>
+            <span>
+              <strong>Points:</strong> {totalPoints}
+            </span>
             <span className={`badge ${quiz?.published ? "bg-success" : "bg-secondary"}`}>
               {quiz?.published ? "✓ Published" : "⊝ Not Published"}
             </span>
