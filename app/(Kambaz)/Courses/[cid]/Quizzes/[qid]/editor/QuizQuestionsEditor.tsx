@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
-import { Button } from "react-bootstrap";
+import { Button, Badge } from "react-bootstrap";
 import QuestionEditor from "./QuestionEditor";
 
 interface QuizQuestionsEditorProps {
@@ -30,6 +30,14 @@ export default function QuizQuestionsEditor({
       setOriginalQuestions(JSON.parse(JSON.stringify(quiz.questions)));
     }
   }, [quiz]);
+
+  // 👉 Helper: map internal type to display label
+  const getQuestionTypeLabel = (type: string | undefined) => {
+    const t = (type || "").toLowerCase();
+    if (t.includes("true") || t.includes("false")) return "True/False";
+    if (t.includes("fill") || t.includes("blank")) return "Fill in the Blank";
+    return "Multiple Choice"; // default
+  };
 
   const handleAddQuestion = () => {
     const newQuestion = {
@@ -67,8 +75,8 @@ export default function QuizQuestionsEditor({
     setEditingQuestionId(null);
 
     // Update original questions
-    setOriginalQuestions((prev) => 
-      prev.map((q) => q._id === questionId ? { ...updatedQuestion } : q)
+    setOriginalQuestions((prev) =>
+      prev.map((q) => (q._id === questionId ? { ...updatedQuestion } : q))
     );
 
     // Notify parent
@@ -92,9 +100,7 @@ export default function QuizQuestionsEditor({
     setEditingQuestionId(null);
 
     // Update original questions
-    setOriginalQuestions((prev) => 
-      prev.filter((q) => q._id !== questionId)
-    );
+    setOriginalQuestions((prev) => prev.filter((q) => q._id !== questionId));
 
     // Notify parent
     if (onChange) {
@@ -111,7 +117,7 @@ export default function QuizQuestionsEditor({
     if (editingQuestionId?.startsWith("temp_")) {
       const newQuestions = questions.filter((q) => q._id !== editingQuestionId);
       setQuestions(newQuestions);
-      
+
       // Notify parent about the change
       if (onChange) {
         onChange({
@@ -122,13 +128,15 @@ export default function QuizQuestionsEditor({
       }
     } else {
       // If it's an existing question, restore original data
-      const originalQuestion = originalQuestions.find((q: any) => q._id === editingQuestionId);
+      const originalQuestion = originalQuestions.find(
+        (q: any) => q._id === editingQuestionId
+      );
       if (originalQuestion) {
-        const newQuestions = questions.map((q) => 
+        const newQuestions = questions.map((q) =>
           q._id === editingQuestionId ? { ...originalQuestion } : q
         );
         setQuestions(newQuestions);
-        
+
         // Notify parent about the change
         if (onChange) {
           onChange({
@@ -176,7 +184,8 @@ export default function QuizQuestionsEditor({
       {/* Questions List */}
       {questions.length === 0 && editingQuestionId === null ? (
         <div className="alert alert-info text-center">
-          No questions yet. Click &quot;+ New Question&quot; to add your first question.
+          No questions yet. Click &quot;+ New Question&quot; to add your first
+          question.
         </div>
       ) : (
         <div className="questions-list mb-4">
@@ -199,6 +208,11 @@ export default function QuizQuestionsEditor({
                         <h6 className="mb-0">
                           {index + 1}. {question.title}
                         </h6>
+
+                        {/* 👉 Show type + points */}
+                        <Badge bg="light" text="dark">
+                          {getQuestionTypeLabel(question.type)}
+                        </Badge>
                         <span className="text-muted">
                           ({question.points} pts)
                         </span>
@@ -206,7 +220,8 @@ export default function QuizQuestionsEditor({
                       <div
                         className="question-preview mt-2"
                         dangerouslySetInnerHTML={{
-                          __html: question.question || "<em>No question text</em>",
+                          __html:
+                            question.question || "<em>No question text</em>",
                         }}
                         style={{ color: "#666" }}
                       />
