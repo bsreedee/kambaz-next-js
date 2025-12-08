@@ -63,16 +63,24 @@ export default function QuizResultsPage() {
   };
 
   const canShowCorrectAnswers = () => {
-    if (!quiz) return false;
-    const setting = quiz.showCorrectAnswers || "Never";
-    if (setting === "Immediately") return true;
-    if (setting === "Never") return false;
-    if (setting === "After Due Date") {
-      if (!quiz.dueDate) return false;
-      return new Date() > new Date(quiz.dueDate);
-    }
-    return false;
-  };
+  if (!quiz) return false;
+
+  // Be robust to casing / slightly different values
+  const rawSetting = quiz.showCorrectAnswers || "Immediately";
+  const setting = rawSetting.toString().toLowerCase();
+
+  if (setting === "immediately") return true;
+  if (setting === "never") return false;
+
+  if (setting === "after due date" || setting === "afterduedate") {
+    if (!quiz.dueDate) return false;
+    return new Date() > new Date(quiz.dueDate);
+  }
+
+  // Fallback: be safe and don't show answers
+  return false;
+};
+
 
   const showAnswers = canShowCorrectAnswers();
 
@@ -111,11 +119,43 @@ export default function QuizResultsPage() {
 
   const questionType = getQuestionType(currentQuestion);
   
-  // Debug logging
-  console.log("Current Question:", currentQuestion);
-  console.log("Question Type:", questionType);
-  console.log("Has choices:", currentQuestion.choices);
-  console.log("Has options:", currentQuestion.options);
+  // For multiple choice - check if multiple answers allowed
+  const isMultipleChoice = questionType === "multiple-choice";
+  const allowMultipleAnswers = currentQuestion.allowMultipleAnswers || false;
+  
+  // // Get correct answers (could be array or single value)
+  // const correctAnswers = isMultipleChoice && allowMultipleAnswers
+  //   ? (Array.isArray(currentQuestion.correctAnswer) ? currentQuestion.correctAnswer : [currentQuestion.correctAnswer])
+  //   : [currentQuestion.correctAnswer];
+  
+  // // Get student answers (could be array or single value)
+  // const studentAnswers = currentAnswer?.answer
+  //   ? (Array.isArray(currentAnswer.answer) ? currentAnswer.answer : [currentAnswer.answer])
+  //   : [];
+
+  // Get correct answers (could be array or single value)
+const correctAnswers = isMultipleChoice && allowMultipleAnswers
+  ? (Array.isArray(currentQuestion.correctAnswer) ? currentQuestion.correctAnswer : [currentQuestion.correctAnswer])
+  : [currentQuestion.correctAnswer];
+
+// Get student answers (could be array or single value)
+const rawStudentAnswer = currentAnswer?.answer;
+let studentAnswers = [];
+
+if (rawStudentAnswer !== undefined && rawStudentAnswer !== null) {
+  if (Array.isArray(rawStudentAnswer)) {
+    studentAnswers = rawStudentAnswer;
+  } else if (allowMultipleAnswers && typeof rawStudentAnswer === 'string') {
+    // If it's a string but multiple answers are allowed, try to parse it
+    studentAnswers = rawStudentAnswer.split(',').map(a => a.trim());
+  } else {
+    // Single answer
+    studentAnswers = [rawStudentAnswer];
+  }
+}
+
+  // Check if this is the last question
+  const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
 
   return (
     <Container className="mt-4" style={{ maxWidth: "1000px" }}>
@@ -179,31 +219,81 @@ export default function QuizResultsPage() {
               <div>
                 {(() => {
                   let choicesList: any[] = [];
+                  
+                  // Try multiple possible sources for choices
                   if (Array.isArray(currentQuestion.choices)) {
                     choicesList = currentQuestion.choices;
                   } else if (Array.isArray(currentQuestion.options)) {
-                    choicesList = currentQuestion.options.map((opt: string) => ({
-                      text: opt,
-                      correct: opt === currentQuestion.correctAnswer,
-                    }));
+                    choicesList = currentQuestion.options;
+                  } else if (currentQuestion.answers && Array.isArray(currentQuestion.answers)) {
+                    // Handle the structure from your screenshot
+                    choicesList = currentQuestion.answers.map((ans: any) => {
+                      if (typeof ans === 'string') return ans;
+                      if (ans.text !== undefined) return ans.text;
+                      if (ans.answerText !== undefined) return ans.answerText;
+                      return JSON.stringify(ans);
+                    });
+                  } else {
+                    // Fallback: check if there are any answer-like properties
+                    for (const key in currentQuestion) {
+                      if (key.includes('answer') && key !== 'correctAnswer' && 
+                          Array.isArray(currentQuestion[key])) {
+                        choicesList = currentQuestion[key];
+                        break;
+                      }
+                    }
+                  }
+
+                  // If still no choices, create some default ones
+                  if (choicesList.length === 0) {
+                    choicesList = ["Option 1", "Option 2", "Option 3", "Option 4"];
                   }
 
                   return choicesList.map((choice: any, idx: number) => {
                     // Safely extract text
-                    const choiceText = typeof choice === 'string' ? choice : (choice?.text || `Option ${idx + 1}`);
-                    const isSelected = currentAnswer?.answer === choiceText;
-                    const isCorrect = showAnswers && (choice.correct || choiceText === currentQuestion.correctAnswer);
-
-                    let className = "p-3 mb-2 border border-secondary border-2 rounded bg-light";
+                    const choiceText = typeof choice === 'string' 
+                      ? choice 
+                      : (choice?.text || choice?.answerText || `Option ${idx + 1}`);
                     
-                    // Only show colors/badges when showAnswers is true
+                    // Convert choiceText to string for comparison
+                    const choiceTextStr = String(choiceText);
+                    
+                    // Check if this choice is selected
+                    const isSelected = studentAnswers.some((ans: any) => 
+                      String(ans).trim() === choiceTextStr.trim()
+                    );
+                    
+                    // Check if this choice is correct
+                    const isCorrect = showAnswers && correctAnswers.some((ans: any) =>
+                      String(ans).trim() === choiceTextStr.trim()
+                    );
+
+                    let className = "p-3 mb-2 border rounded";
+                    
+                    // When answers are shown
                     if (showAnswers) {
-                      if (isSelected && isCorrect) {
-                        className = "p-3 mb-2 border border-success border-3 rounded bg-light";
-                      } else if (isSelected && !isCorrect) {
-                        className = "p-3 mb-2 border border-danger border-3 rounded bg-light";
-                      } else if (!isSelected && isCorrect) {
-                        className = "p-3 mb-2 border border-warning border-2 rounded bg-light";
+                      if (isCorrect && isSelected) {
+                        // Correct and selected
+                        className = "p-3 mb-2 border border-success border-3 rounded bg-success bg-opacity-10";
+                      } else if (isCorrect && !isSelected) {
+                        // Correct but not selected
+                        className = "p-3 mb-2 border border-success border-3 rounded bg-success bg-opacity-10";
+                      } else if (!isCorrect && isSelected) {
+                        // Selected but incorrect
+                        className = "p-3 mb-2 border border-danger border-3 rounded bg-danger bg-opacity-10";
+                      } else {
+                        // Not selected, not correct
+                        className = "p-3 mb-2 border rounded bg-light";
+                      }
+                    } 
+                    // When answers are NOT shown yet
+                    else {
+                      if (isSelected) {
+                        // Student's selection
+                        className = "p-3 mb-2 border border-primary border-3 rounded bg-primary bg-opacity-10";
+                      } else {
+                        // Other options
+                        className = "p-3 mb-2 border rounded bg-light";
                       }
                     }
 
@@ -212,20 +302,34 @@ export default function QuizResultsPage() {
                         <div className="d-flex align-items-center">
                           {isSelected && <span className="me-2">▶️</span>}
                           <span className="text-dark">{choiceText}</span>
-                          {showAnswers && isSelected && isCorrect && (
-                            <Badge bg="success" className="ms-auto">Your Answer ✓</Badge>
-                          )}
-                          {showAnswers && isSelected && !isCorrect && (
-                            <Badge bg="danger" className="ms-auto">Your Answer ✗</Badge>
-                          )}
-                          {showAnswers && !isSelected && isCorrect && (
-                            <Badge bg="success" className="ms-auto">Correct Answer ✓</Badge>
-                          )}
+                          <div className="ms-auto">
+                            {showAnswers && isCorrect && !isSelected && (
+                              <Badge bg="success" className="ms-2">Correct Answer ✓</Badge>
+                            )}
+                            {showAnswers && isSelected && isCorrect && (
+                              <Badge bg="success" className="ms-2">Your Answer ✓</Badge>
+                            )}
+                            {showAnswers && isSelected && !isCorrect && (
+                              <Badge bg="danger" className="ms-2">Your Answer ✗</Badge>
+                            )}
+                            {!showAnswers && isSelected && (
+                              <Badge bg="primary" className="ms-2">Your Answer</Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
                   });
                 })()}
+                {allowMultipleAnswers && (
+                  <div className="mt-3 text-muted small">
+                    <em>
+                      {showAnswers 
+                        ? "Note: Multiple correct answers were allowed for this question." 
+                        : "Note: Multiple answers may be selected for this question."}
+                    </em>
+                  </div>
+                )}
               </div>
             )}
 
@@ -233,20 +337,22 @@ export default function QuizResultsPage() {
             {questionType === "true-false" && (
               <div>
                 {[true, false].map((value) => {
-                  const isSelected = currentAnswer?.answer === value;
-                  const isCorrect = showAnswers && value === currentQuestion.correctAnswer;
+                  const isSelected = studentAnswers.includes(value);
+                  const isCorrect = showAnswers && correctAnswers.includes(value);
 
-                  let className = "p-3 mb-2 border border-secondary border-2 rounded bg-light";
+                  let className = "p-3 mb-2 border rounded bg-light";
                   
                   // Only show colors when showAnswers is true
                   if (showAnswers) {
                     if (isSelected && isCorrect) {
-                      className = "p-3 mb-2 border border-success border-3 rounded bg-light";
+                      className = "p-3 mb-2 border border-success border-3 rounded bg-success bg-opacity-10";
                     } else if (isSelected && !isCorrect) {
-                      className = "p-3 mb-2 border border-danger border-3 rounded bg-light";
+                      className = "p-3 mb-2 border border-danger border-3 rounded bg-danger bg-opacity-10";
                     } else if (!isSelected && isCorrect) {
-                      className = "p-3 mb-2 border border-warning border-2 rounded bg-light";
+                      className = "p-3 mb-2 border border-success border-3 rounded bg-success bg-opacity-10";
                     }
+                  } else if (isSelected) {
+                    className = "p-3 mb-2 border border-primary border-3 rounded bg-primary bg-opacity-10";
                   }
 
                   return (
@@ -254,15 +360,20 @@ export default function QuizResultsPage() {
                       <div className="d-flex align-items-center">
                         {isSelected && <span className="me-2">▶️</span>}
                         <span className="text-dark">{value ? "True" : "False"}</span>
-                        {showAnswers && isSelected && isCorrect && (
-                          <Badge bg="success" className="ms-auto">Your Answer ✓</Badge>
-                        )}
-                        {showAnswers && isSelected && !isCorrect && (
-                          <Badge bg="danger" className="ms-auto">Your Answer ✗</Badge>
-                        )}
-                        {showAnswers && !isSelected && isCorrect && (
-                          <Badge bg="success" className="ms-auto">Correct Answer ✓</Badge>
-                        )}
+                        <div className="ms-auto">
+                          {showAnswers && isSelected && isCorrect && (
+                            <Badge bg="success" className="ms-2">Your Answer ✓</Badge>
+                          )}
+                          {showAnswers && isSelected && !isCorrect && (
+                            <Badge bg="danger" className="ms-2">Your Answer ✗</Badge>
+                          )}
+                          {showAnswers && !isSelected && isCorrect && (
+                            <Badge bg="success" className="ms-2">Correct Answer ✓</Badge>
+                          )}
+                          {!showAnswers && isSelected && (
+                            <Badge bg="primary" className="ms-2">Your Answer</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -283,18 +394,21 @@ export default function QuizResultsPage() {
                           ? currentAnswer.answer[index]
                           : "";
                       const correctAnswer = currentQuestion.blanks[index];
-                      const isCorrect = studentAnswer?.toLowerCase().trim() === correctAnswer?.toLowerCase().trim();
+                      // Safely compare strings by converting both to strings first
+                      const studentAnswerStr = String(studentAnswer || "").toLowerCase().trim();
+                      const correctAnswerStr = String(correctAnswer || "").toLowerCase().trim();
+                      const isCorrect = studentAnswerStr === correctAnswerStr;
 
                       return (
                         <div key={index} className="mb-3">
                           <div className="small fw-semibold mb-1">Blank [{index + 1}]:</div>
-                          <div className="p-3 border border-secondary border-2 rounded bg-light">
+                          <div className={`p-3 border rounded ${showAnswers && isCorrect ? 'border-success bg-success bg-opacity-10' : 'border-secondary bg-light'}`}>
                             <span className="text-dark">{studentAnswer || "(No answer)"}</span>
                           </div>
                           {showAnswers && (
                             <div className="mt-2">
                               <div className="small fw-semibold">Correct Answer:</div>
-                              <div className="p-2 border border-success rounded bg-light">
+                              <div className="p-2 border border-success rounded bg-success bg-opacity-10">
                                 <span className="text-dark">{correctAnswer}</span>
                               </div>
                             </div>
@@ -307,17 +421,23 @@ export default function QuizResultsPage() {
                   // Single blank
                   <div>
                     <strong>Your Answer:</strong>
-                    <div className="p-3 border border-secondary border-2 rounded bg-light">
-                      <span className="text-dark">{currentAnswer?.answer || "(No answer provided)"}</span>
+                    <div className={`p-3 border rounded ${
+                      showAnswers && 
+                      String(studentAnswers[0] || "").toLowerCase().trim() === 
+                      String(correctAnswers[0] || "").toLowerCase().trim() 
+                        ? 'border-success bg-success bg-opacity-10' 
+                        : 'border-secondary bg-light'
+                    }`}>
+                      <span className="text-dark">{studentAnswers[0] || "(No answer provided)"}</span>
                     </div>
                     {showAnswers && (
                       <div className="mt-3">
                         <strong>Correct Answer:</strong>
-                        <div className="p-3 border border-success rounded bg-light">
+                        <div className="p-3 border border-success rounded bg-success bg-opacity-10">
                           <span className="text-dark">
-                            {Array.isArray(currentQuestion.blanks)
-                              ? currentQuestion.blanks.join(", ")
-                              : currentQuestion.correctAnswer}
+                            {Array.isArray(correctAnswers)
+                              ? correctAnswers.join(", ")
+                              : String(correctAnswers[0] || "")}
                           </span>
                         </div>
                       </div>
@@ -337,15 +457,20 @@ export default function QuizResultsPage() {
             >
               ← Previous
             </Button>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setCurrentQuestionIndex(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
-              }
-              disabled={currentQuestionIndex === quiz.questions.length - 1}
-            >
-              Next →
-            </Button>
+            
+            {/* Conditionally show Next or nothing on last question */}
+            {!isLastQuestion ? (
+              <Button
+                variant="primary"
+                onClick={() =>
+                  setCurrentQuestionIndex(Math.min(quiz.questions.length - 1, currentQuestionIndex + 1))
+                }
+              >
+                Next →
+              </Button>
+            ) : (
+              <div></div>
+            )}
           </div>
 
           <div className="text-center">

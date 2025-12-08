@@ -233,7 +233,7 @@ export default function QuestionEditor({
         {formData.type === "true-false" &&
           "Enter your question text, then select if True or False is the correct answer."}
         {formData.type === "fill-in-blank" &&
-          "Create a question with blanks. Use [1], [2], [3], etc. in your question text where you want input boxes. Define the correct answer for each numbered blank below. Students get partial credit for each correct blank."}
+          "Enter your question with blanks marked with numbers to answer the question"}
       </p>
 
       {/* Question Text */}
@@ -247,18 +247,13 @@ export default function QuestionEditor({
             onChange={(e) => handleChange("question", e.target.value)}
             placeholder={
               formData.type === "fill-in-blank"
-                ? 'Example: "The [1] is the largest planet, and [2] is the smallest."'
+                ? 'Example: "The ___1___ is the largest planet, and ___2___ is the smallest."'
                 : "Enter your question"
             }
             style={{ border: "none", resize: "none" }}
             className="p-3"
           />
         </div>
-        {formData.type === "fill-in-blank" && (
-          <Form.Text className="text-muted">
-            Use [1], [2], [3], etc. to mark where blanks should appear.
-          </Form.Text>
-        )}
       </Form.Group>
 
       {/* MULTIPLE CHOICE */}
@@ -378,28 +373,27 @@ export default function QuestionEditor({
       {/* FILL IN THE BLANKS */}
       {formData.type === "fill-in-blank" && (
         <div className="mb-4">
-          <Alert variant="info" className="mb-3">
+          {/* <Alert variant="info" className="mb-3">
             <strong>Partial Grading:</strong> Students earn points for each correct blank. 
             For {formData.blanks.length} blank{formData.blanks.length > 1 ? 's' : ''} worth {formData.points} total points, 
             each blank is worth <strong>{(formData.points / Math.max(1, formData.blanks.length)).toFixed(2)} points</strong>.
-          </Alert>
+          </Alert> */}
           
           <Form.Label className="fw-semibold">Correct Answers for Each Blank:</Form.Label>
           <p className="text-muted small">
-            Define the correct answer for [1], [2], [3], etc. Answers are case-insensitive.
+            Define the correct answer for blanks. Answers are case-insensitive.
           </p>
           {formData.blanks.map((blank, index) => (
             <div key={index} className="mb-3 border rounded p-3 bg-light">
               <div className="d-flex align-items-center gap-2 mb-2">
-                <span className="badge bg-primary fs-6">{index + 1}</span>
                 <span className="fw-semibold">Blank {index + 1}</span>
                 {formData.blanks.length > 1 && (
                   <button
                     type="button"
-                    className="btn btn-link text-danger p-0 ms-auto"
+                    className="btn btn-link text-secondary p-0 ms-auto"
                     onClick={() => handleRemoveBlank(index)}
                   >
-                    <FaTrash /> Remove
+                    <FaTrash />
                   </button>
                 )}
               </div>

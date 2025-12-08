@@ -202,9 +202,6 @@ export default function QuizQuestionsEditor({
                         <span className="text-muted">
                           ({question.points} pts)
                         </span>
-                        {question.type === "multiple-choice" && question.allowMultipleAnswers && (
-                          <span className="badge bg-info">Multiple Answers</span>
-                        )}
                       </div>
                       <div
                         className="question-preview mt-2"
