@@ -88,6 +88,7 @@ export default function QuizQuestionsEditor({
       });
     }
   };
+  
 
   const handleDeleteQuestion = (questionId: string) => {
     const confirmDelete = window.confirm(
