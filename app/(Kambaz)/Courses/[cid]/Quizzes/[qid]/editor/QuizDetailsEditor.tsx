@@ -371,7 +371,7 @@ export default function QuizDetailsEditor({
           className="px-4"
           style={{ border: "1px solid #ccc" }}
         >
-          Back
+          Cancel
         </Button>
         <Button
           variant="danger"

@@ -9,6 +9,7 @@ import { RootState } from "../../../../store";
 import * as client from "../client";
 import * as attemptClient from "../attemptClient";
 import { updateQuiz as updateQuizInStore } from "../reducer";
+import { LuPencil } from "react-icons/lu";
 
 const formatDateTime = (value?: string | Date) => {
   if (!value) return "Not set";
@@ -214,8 +215,9 @@ export default function QuizDetailsPage() {
             onClick={() =>
               router.push(`/Courses/${cid}/Quizzes/${qid}/editor`)
             }
+            className="d-flex align-items-center"
           >
-            ✏️ Edit
+            <LuPencil /> Edit
           </Button>
         </div>
       )}
