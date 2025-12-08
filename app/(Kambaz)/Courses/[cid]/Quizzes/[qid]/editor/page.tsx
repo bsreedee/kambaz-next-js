@@ -77,7 +77,7 @@ export default function QuizEditorPage() {
   };
 
   const handleCancel = () => {
-    router.push(`/Courses/${cid}/Quizzes/${qid}`);
+    router.push(`/Courses/${cid}/Quizzes`);
   };
 
   // NEW: Publish / Unpublish buttons in header (stay on this page)
