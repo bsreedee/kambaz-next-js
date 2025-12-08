@@ -9,6 +9,7 @@
   display: none !important;
 }
 
+
 /* Hide the dropdown caret/arrow for all quiz dropdowns */
 #wd-quiz-header-menu::after,
 [id^="quiz-actions-"]::after {
