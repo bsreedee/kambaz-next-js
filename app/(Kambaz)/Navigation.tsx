@@ -12,6 +12,7 @@ import { usePathname } from "next/navigation";
 import { LiaBookSolid, LiaCogSolid } from "react-icons/lia";
 import { IoCalendarOutline } from "react-icons/io5";
 import { AiOutlineDashboard } from "react-icons/ai";
+import { PiProjectorScreenLight } from "react-icons/pi";
 
 export default function KambazNavigation() {
     const pathname = usePathname();
@@ -21,6 +22,7 @@ export default function KambazNavigation() {
       { label: "Calendar",  path: "/Calendar",  icon: IoCalendarOutline },
       { label: "Inbox",     path: "/Inbox",     icon: FaInbox },
       { label: "Labs",      path: "/Labs",             icon: LiaCogSolid },
+      { label: "Project",   path: "/Project",  icon: PiProjectorScreenLight },
     ];
 
   // const links = [

@@ -31,27 +31,43 @@ export default function QuizTakingPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Detect question type - IMPROVED: More specific and mutually exclusive
-  const isFillInBlank = (q: any) => {
-    // Check for blanks array FIRST (most reliable)
-    if (Array.isArray(q.blanks) && q.blanks.length > 0) return true;
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return t === "fill-in-blank" || t === "fill in the blank" || t === "fill in blank";
-  };
-
-  const isTrueFalse = (q: any) => {
-    // Check if correctAnswer is boolean FIRST
-    if (typeof q.correctAnswer === "boolean") return true;
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return t === "true-false" || t === "true/false" || t === "truefalse";
-  };
-
-  const isMultipleChoice = (q: any) => {
-    // Default to multiple choice if has choices/options
-    if (Array.isArray(q.choices) && q.choices.length > 0) return true;
-    if (Array.isArray(q.options) && q.options.length > 0) return true;
-    const t = (q.type || q.questionType || "").toString().toLowerCase();
-    return t === "multiple-choice" || t === "multiple choice" || t.includes("multiple");
+  // FIXED: Better question type detection that doesn't overlap
+  const getQuestionType = (q: any): "multiple-choice" | "true-false" | "fill-in-blank" => {
+    // First check explicit type field
+    const explicitType = (q.type || q.questionType || "").toString().toLowerCase().trim();
+    
+    // Check by explicit type first
+    if (explicitType.includes("true") || explicitType.includes("false")) {
+      return "true-false";
+    }
+    if (explicitType.includes("fill") || explicitType.includes("blank")) {
+      return "fill-in-blank";
+    }
+    if (explicitType.includes("multiple") || explicitType.includes("choice")) {
+      return "multiple-choice";
+    }
+    
+    // Check by data structure (fallback)
+    // 1. True/False: has boolean correctAnswer OR no choices/options/blanks
+    if (typeof q.correctAnswer === "boolean") {
+      return "true-false";
+    }
+    
+    // 2. Fill in Blank: has blanks array
+    if (Array.isArray(q.blanks) && q.blanks.length > 0) {
+      return "fill-in-blank";
+    }
+    
+    // 3. Multiple Choice: has choices/options (default)
+    if (Array.isArray(q.choices) && q.choices.length > 0) {
+      return "multiple-choice";
+    }
+    if (Array.isArray(q.options) && q.options.length > 0) {
+      return "multiple-choice";
+    }
+    
+    // Default to multiple choice
+    return "multiple-choice";
   };
 
   // Check if quiz is available
@@ -231,7 +247,7 @@ export default function QuizTakingPage() {
   const handleAnswerChange = (value: any) => {
     const questionId = currentQuestionIndex.toString();
     const currentQuestion = quiz.questions[currentQuestionIndex];
-    const questionType = currentQuestion.questionType || currentQuestion.type;
+    const questionType = getQuestionType(currentQuestion);
 
     setAnswers((prev) => ({
       ...prev,
@@ -265,7 +281,7 @@ export default function QuizTakingPage() {
       const savePromises = Object.entries(answers).map(([questionId, answer]) => {
         const questionIndex = parseInt(questionId);
         const question = quiz.questions[questionIndex];
-        const questionType = question?.questionType || question?.type || "multiple-choice";
+        const questionType = getQuestionType(question);
         
         return attemptClient.saveQuestionAnswer(
           attempt._id,
@@ -304,7 +320,7 @@ export default function QuizTakingPage() {
       const savePromises = Object.entries(answers).map(([questionId, answer]) => {
         const questionIndex = parseInt(questionId);
         const question = quiz.questions[questionIndex];
-        const questionType = question?.questionType || question?.type || "multiple-choice";
+        const questionType = getQuestionType(question);
         
         return attemptClient.saveQuestionAnswer(
           attempt._id,
@@ -405,6 +421,7 @@ export default function QuizTakingPage() {
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const questionId = currentQuestionIndex.toString();
+  const questionType = getQuestionType(currentQuestion);
 
   return (
     <Container className="mt-4" style={{ maxWidth: "900px" }}>
@@ -467,6 +484,11 @@ export default function QuizTakingPage() {
               <span className="badge bg-secondary fs-6">
                 {currentQuestion.points || 0} pts
               </span>
+              <span className="badge bg-info">
+                {questionType === "multiple-choice" && "Multiple Choice"}
+                {questionType === "true-false" && "True/False"}
+                {questionType === "fill-in-blank" && "Fill in Blank"}
+              </span>
             </div>
 
             {/* Question text */}
@@ -477,99 +499,90 @@ export default function QuizTakingPage() {
               }}
             />
 
-            {/* RENDER ONLY ONE QUESTION TYPE - Use if-else chain for mutual exclusivity */}
-            {(() => {
-              // FILL IN THE BLANK - Check this FIRST (most specific)
-              if (isFillInBlank(currentQuestion)) {
-                return (
-                  <div>
-                    <Form.Label className="fw-semibold">Your Answer:</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={answers[questionId] ?? ""}
-                      onChange={(e) => handleAnswerChange(e.target.value)}
-                      placeholder="Type your answer here"
-                      style={{ maxWidth: "400px" }}
-                      className="fs-5"
-                    />
-                  </div>
-                );
-              }
-              
-              // TRUE/FALSE - Check this SECOND
-              if (isTrueFalse(currentQuestion)) {
-                return (
-                  <div>
-                    <div className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
-                      <Form.Check
-                        type="radio"
-                        id={`tf-${questionId}-true`}
-                        name={`question-${questionId}`}
-                        label="True"
-                        className="fs-5"
-                        checked={answers[questionId] === true}
-                        onChange={() => handleAnswerChange(true)}
-                      />
-                    </div>
-                    <div className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
-                      <Form.Check
-                        type="radio"
-                        id={`tf-${questionId}-false`}
-                        name={`question-${questionId}`}
-                        label="False"
-                        className="fs-5"
-                        checked={answers[questionId] === false}
-                        onChange={() => handleAnswerChange(false)}
-                      />
-                    </div>
-                  </div>
-                );
-              }
-              
-              // MULTIPLE CHOICE - Check this LAST (default)
-              if (isMultipleChoice(currentQuestion)) {
-                let choicesList: any[] = [];
-                
-                if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
-                  choicesList = currentQuestion.choices;
-                } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
-                  choicesList = currentQuestion.options.map((opt: string) => ({
-                    text: opt,
-                  }));
-                }
-
-                return (
-                  <div>
-                    {choicesList.map((choice: any, idx: number) => {
-                      // Safely extract text from choice
-                      const choiceText = typeof choice === 'string' ? choice : (choice?.text || `Option ${idx + 1}`);
-                      const selected = answers[questionId] === choiceText;
-
-                      return (
-                        <div key={idx} className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
-                          <Form.Check
-                            type="radio"
-                            id={`choice-${questionId}-${idx}`}
-                            name={`question-${questionId}`}
-                            label={choiceText}
-                            checked={selected}
-                            onChange={() => handleAnswerChange(choiceText)}
-                            className="fs-5"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              }
-              
-              // Fallback if no type detected
-              return (
-                <div className="alert alert-warning">
-                  Unknown question type: {currentQuestion.type || currentQuestion.questionType || "not specified"}
+            {/* RENDER BASED ON QUESTION TYPE - FIXED: No overlap */}
+            {questionType === "fill-in-blank" && (
+              <div>
+                <Form.Label className="fw-semibold">Your Answer:</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={answers[questionId] ?? ""}
+                  onChange={(e) => handleAnswerChange(e.target.value)}
+                  placeholder="Type your answer here"
+                  style={{ maxWidth: "400px" }}
+                  className="fs-5"
+                />
+              </div>
+            )}
+            
+            {questionType === "true-false" && (
+              <div>
+                <div className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
+                  <Form.Check
+                    type="radio"
+                    id={`tf-${questionId}-true`}
+                    name={`question-${questionId}`}
+                    label="True"
+                    className="fs-5"
+                    checked={answers[questionId] === true}
+                    onChange={() => handleAnswerChange(true)}
+                  />
                 </div>
-              );
-            })()}
+                <div className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
+                  <Form.Check
+                    type="radio"
+                    id={`tf-${questionId}-false`}
+                    name={`question-${questionId}`}
+                    label="False"
+                    className="fs-5"
+                    checked={answers[questionId] === false}
+                    onChange={() => handleAnswerChange(false)}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {questionType === "multiple-choice" && (
+              <div>
+                {(() => {
+                  let choicesList: any[] = [];
+                  
+                  if (Array.isArray(currentQuestion.choices) && currentQuestion.choices.length > 0) {
+                    choicesList = currentQuestion.choices;
+                  } else if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+                    choicesList = currentQuestion.options.map((opt: string) => ({
+                      text: opt,
+                    }));
+                  } else {
+                    // If no choices found, show empty state
+                    return (
+                      <div className="alert alert-warning">
+                        No answer choices available for this question
+                      </div>
+                    );
+                  }
+
+                  return choicesList.map((choice: any, idx: number) => {
+                    // Safely extract text from choice
+                    const choiceText = typeof choice === 'string' ? choice : (choice?.text || `Option ${idx + 1}`);
+                    const selected = answers[questionId] === choiceText;
+
+                    return (
+                      <div key={idx} className="mb-3 p-2 border rounded" style={{ cursor: 'pointer' }}>
+                        <Form.Check
+                          type="radio"
+                          id={`choice-${questionId}-${idx}`}
+                          name={`question-${questionId}`}
+                          label={choiceText}
+                          checked={selected}
+                          onChange={() => handleAnswerChange(choiceText)}
+                          className="fs-5"
+                        />
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
           </div>
 
           {/* Navigation Buttons */}
@@ -647,6 +660,11 @@ export default function QuizTakingPage() {
                   >
                     {isAnswered ? "✓ " : "○ "}
                     Question {idx + 1}
+                    <span className="float-end badge bg-light text-dark">
+                      {getQuestionType(q) === "multiple-choice" && "MC"}
+                      {getQuestionType(q) === "true-false" && "TF"}
+                      {getQuestionType(q) === "fill-in-blank" && "FB"}
+                    </span>
                   </Button>
                 );
               })}
